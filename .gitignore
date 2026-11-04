@@ -1,0 +1,4 @@
+# nothing from the private working repo belongs here
+*.bom-bak
+Thumbs.db
+.DS_Store
