@@ -2,13 +2,17 @@
 
 This is the setup half of my Thelema Solo DNA100C build (**[chip swap guide](chip-swap-thelema-solo-dna100c.md)**). It works on **any DNA color mod** (DNA75C, DNA100C, DNA250C) running Evolv's **international firmware**.
 
-**Low vision? See the High Contrast theme: [High Contrast: Large Text](high-contrast/README.md)**
+**Low vision?** A High Contrast: Large Text theme is coming — it is not published yet,
+see [`RELEASE-NOTES.md`](RELEASE-NOTES.md).
 
-**Downloads:** https://github.com/Gerglem/gremlin-dna/tree/main/files
-- `gremlin-theme.ecigtheme`: the theme on its own
+**Downloads:** https://github.com/Gerglem/gremlin-dna/tree/main/files — current release
+**v2.5.07**. The `current` files are always the newest build; the `v2.5.07` files are
+that exact build and never change. See
+[naming](RELEASE-NOTES.md#how-the-files-are-named).
+- `gremlin_current_theme.ecigtheme` (or `gremlin_v2.5.07_theme.ecigtheme`): the theme on its own
+- `gremlin_current.ecig` (or `gremlin_v2.5.07.ecig`): the full setup — the theme plus the four profiles, with cold resistance cleared so you measure your own
 - `materials/dtv5xl-tcr200.csv` and `materials/questcup-tcr125.csv`: the TCR material curves
 - `profiles/DTv5XL-Profile.ecigprofile`, `QuestCup.ecigprofile`, `DTv5XL-Clean.ecigprofile`, `QuestCup-Clean.ecigprofile`
-- `gremlin-full-setup.ecig`: the full setup — the theme plus the four profiles, with cold resistance cleared so you measure your own
 
 ---
 

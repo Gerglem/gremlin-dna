@@ -1,0 +1,11 @@
+# The TCR material curves are imported straight into EScribe on Windows. Commit
+# their bytes verbatim so a raw download from GitHub carries native Windows
+# (CRLF) line endings rather than git's normalized LF.
+*.csv -text
+
+# EScribe containers are zips whose inner XML carries a UTF-8 BOM and CRLF
+# throughout. A single changed byte makes EScribe refuse the whole file with
+# only "Failed to open file", so keep every filter off them.
+*.ecigtheme   -text
+*.ecig        -text
+*.ecigprofile -text

@@ -21,19 +21,59 @@ Swapping a DNA100C into a Lost Vape Thelema Solo is a separate guide:
 
 ## Downloads
 
-Everything is in **[`files/`](files/)**. The filenames do not carry versions, so
-these links always point at the current release.
+Everything is in **[`files/`](files/)**. The current release is **v2.5.07**.
+
+**If you just want the thing, take a `current` file.** It is always the newest
+release, so a link to it keeps working.
 
 | File | What it does |
 |---|---|
-| [`gremlin-full-setup.ecig`](files/gremlin-full-setup.ecig) | Theme **plus** the four profiles and both TCR curves. **Replaces every setting on the mod.** |
-| [`gremlin-theme.ecigtheme`](files/gremlin-theme.ecigtheme) | The theme only. Keeps your profiles and settings. |
+| [`gremlin_current.ecig`](files/gremlin_current.ecig) | Theme **plus** the four profiles and both TCR curves. **Replaces every setting on the mod.** |
+| [`gremlin_current_theme.ecigtheme`](files/gremlin_current_theme.ecigtheme) | The theme only. Keeps your profiles and settings. |
 | [`files/profiles/`](files/profiles/) | The four profiles individually: V5 XL, Quest, and a burn-off for each |
 | [`files/materials/`](files/materials/) | TCR curves — `dtv5xl-tcr200.csv` and `questcup-tcr125.csv` |
 
+**If you want a specific build — or want the file still to make sense in your
+Downloads folder next year — take the versioned one.** A versioned file never
+changes once it is published:
+
+| File | |
+|---|---|
+| [`gremlin_v2.5.07.ecig`](files/gremlin_v2.5.07.ecig) | full setup, v2.5.07 |
+| [`gremlin_v2.5.07_theme.ecigtheme`](files/gremlin_v2.5.07_theme.ecigtheme) | theme only, v2.5.07 |
+
+Two older names, [`gremlin-theme.ecigtheme`](files/gremlin-theme.ecigtheme) and
+[`gremlin-full-setup.ecig`](files/gremlin-full-setup.ecig), are still here and still
+track the current release. Forum posts link straight at them, so they are not going
+away — but new links should use `current` or a version.
+
 **Back up your own setup first** — in EScribe, `File -> Save`.
 
-What changed, and which version you have: [`RELEASE-NOTES.md`](RELEASE-NOTES.md).
+> **The `current` files are copies, not links, and that is on purpose.** GitHub cannot
+> serve a git symlink as a usable raw download, so `current` has to be a real copy of
+> the newest versioned file — right now it is byte-for-byte the same as `v2.5.07`. These
+> files are under 50 KB each. The duplication is cheaper than breaking every link that
+> is already out in the wild, so please don't "fix" it.
+
+### Which version do I have?
+
+- **In EScribe** — load the file and read the theme's description: the **Theme** tab for
+  an `.ecigtheme`, **Mod → Theme** for an `.ecig`. It starts with
+  `Gremlin - Color Themes v2.5.07`. This works for every build ever shipped, including
+  files you downloaded before the filenames carried versions.
+- **On the mod** — from **v2.5.09 onward** the INFO screen carries a `Theme` row showing
+  the version, so you can check a mod you did not set up yourself. **v2.5.07 and earlier
+  do not have that row**, so for the current release use EScribe.
+- **From the filename** — only if you downloaded a versioned file. `current` and the two
+  older names say nothing about what is inside them; that is exactly what the versioned
+  copies are for.
+
+The profiles and the TCR curves carry **no version at all**. The EScribe profile format
+has nowhere to put one, and the TCR curves are material data rather than a build, so
+both are revised in place. If you need a known-good theme-and-profile combination, take
+a versioned `.ecig` — it has everything inside it.
+
+What changed in each release: [`RELEASE-NOTES.md`](RELEASE-NOTES.md).
 
 ## Installing
 
