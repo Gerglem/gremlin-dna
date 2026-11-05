@@ -1,20 +1,39 @@
 # Release notes
 
-## How the files are named
+## Versions, and the build number
 
-Every release ships the same artifact under two names, and both are real files.
+**A release is `major.minor`** — v2.5. That is what the download is called, what the
+release is tagged, and what this file and the README call it.
+
+**The last delimiter is a build number**, as in `v2.5.07`. It is tracked, it is real,
+and it is deliberately not what the release is called:
+
+> "Use the last delimiter like a build number. Published versions don't display them,
+> but are included in the version number in the theme."
+
+So the build is not displayed in the release — but it **is** in the theme, and there are
+exactly two places to read it:
+
+1. **The theme's own description** — `<Comments>` in an `.ecigtheme`,
+   `EvolvThemeComments` in an `.ecig`. It reads `Gremlin - Color Themes v2.5.07`.
+   This is the one place the build survives the file being renamed.
+2. **The INFO screen's `Theme` row on the mod**, from build **v2.5.09 onward**. Builds
+   up to and including v2.5.07 do not have that row.
+
+**Those two must agree.** They are the same string from the same build, and if they ever
+disagree the build is mislabeled. See
+[which version do I have?](README.md#which-version-do-i-have).
+
+### How the files are named
+
+Every release ships the same artifact under two names, and both are real files. The
+versioned name carries the **release**, `v2.5` — never the build.
 
 | Name | Changes? | Use it for |
 |---|---|---|
-| `gremlin_vX.Y.ZZ_theme.ecigtheme`, `gremlin_vX.Y.ZZ.ecig` | **Never.** Published once and frozen | Knowing what you have. Reporting a bug against a build. Rolling back |
+| `gremlin_vX.Y_theme.ecigtheme`, `gremlin_vX.Y.ecig` | **Never.** Published once and frozen | Knowing which release you have. Rolling back. For a bug report, read the build out of the file as well |
 | `gremlin_current_theme.ecigtheme`, `gremlin_current.ecig` | **Every release** | Links in guides and forum posts, where you want the newest build without editing the link |
 | `gremlin-theme.ecigtheme`, `gremlin-full-setup.ecig` | Every release | Nothing new — these are the original version-less names, kept because posts already link at them. They behave exactly like `current` |
-
-The version is also **inside** every file, in the theme description
-(`<Comments>` in an `.ecigtheme`, `EvolvThemeComments` in an `.ecig`), which is the
-only place it survives being renamed. From **v2.5.09 onward** it is on the device too,
-in the INFO screen's `Theme` row. See
-[which version do I have?](README.md#which-version-do-i-have).
 
 `current` is a copy rather than a symlink because GitHub cannot serve a git symlink as
 a usable raw download. The files are under 50 KB, so the duplication is not worth
@@ -25,28 +44,40 @@ versioned**: the EScribe profile format has no field for a version, and the TCR 
 are material data. They are revised in place, and a versioned `.ecig` is the way to pin
 a whole known-good set.
 
+### A note on the `v2.5.07` tag
+
+**The convention above applies from the next release onward.** The published GitHub
+release is tagged **`v2.5.07`** — a full version including the build — because it went
+out before this was settled. It is a historical tag and it stays exactly as it is:
+retagging or deleting a published release breaks every download URL already in the
+wild. Its assets are named with the build too. Nothing after it will be.
+
 ### Promoting a new release
 
-Copy the verified build into `files/` under its versioned names, then run this from the
-repo root. It is the whole mechanical step — the stable names are only ever copies of a
-versioned file, so there is nothing to decide:
+Copy the verified build into `files/` under its versioned names — **release only, no
+build number in the filename** — then run this from the repo root. It is the whole
+mechanical step; the stable names are only ever copies of the versioned file, so there
+is nothing to decide:
 
 ```powershell
-$v = "2.5.10"   # the new version
-Copy-Item "files\gremlin_v${v}_theme.ecigtheme" "files\gremlin_current_theme.ecigtheme" -Force
-Copy-Item "files\gremlin_v${v}_theme.ecigtheme" "files\gremlin-theme.ecigtheme"         -Force
-Copy-Item "files\gremlin_v${v}.ecig"            "files\gremlin_current.ecig"            -Force
-Copy-Item "files\gremlin_v${v}.ecig"            "files\gremlin-full-setup.ecig"         -Force
+$r = "2.6"      # the release: major.minor, no build number
+Copy-Item "files\gremlin_v${r}_theme.ecigtheme" "files\gremlin_current_theme.ecigtheme" -Force
+Copy-Item "files\gremlin_v${r}_theme.ecigtheme" "files\gremlin-theme.ecigtheme"         -Force
+Copy-Item "files\gremlin_v${r}.ecig"            "files\gremlin_current.ecig"            -Force
+Copy-Item "files\gremlin_v${r}.ecig"            "files\gremlin-full-setup.ecig"         -Force
 ```
 
-Then bump the version in this file and in `README.md`, and add the release entry below.
-The previous versioned files stay exactly where they are — nothing is deleted and
-nothing is renamed, so every link that ever worked keeps working.
+Then bump the release in this file and in `README.md`, add the release entry below, and
+tag the release **`v$r`** — `v2.6`, not `v2.6.03`. Record the build in the entry text,
+where it belongs. The previous versioned files stay exactly where they are — nothing is
+deleted and nothing is renamed, so every link that ever worked keeps working.
 
-## Gremlin: Color Themes — current release v2.5.07
+## Gremlin: Color Themes — current release v2.5
 
-Shipped as `gremlin_v2.5.07_theme.ecigtheme` and `gremlin_v2.5.07.ecig`, and as the
-`current` and version-less copies of both.
+Shipped as `gremlin_v2.5_theme.ecigtheme` and `gremlin_v2.5.ecig`, and as the `current`
+and version-less copies of both. The build inside these files is **v2.5.07**.
+
+The entries below are **builds** — the history inside release v2.5.
 
 - **v2.5.07** — **removed `Set unlock` from the LOCK menu.** On a DNA100C that row starts a sequence that never completes, and while it waits it ignores every button press, so the mod looks dead until you recover it. It sat one row below `After`, where you could land on it by accident. Nothing else changed.
 - **v2.5.06** — the live resistance is back on the home screen.

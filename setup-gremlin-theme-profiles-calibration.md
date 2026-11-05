@@ -6,11 +6,12 @@ This is the setup half of my Thelema Solo DNA100C build (**[chip swap guide](chi
 see [`RELEASE-NOTES.md`](RELEASE-NOTES.md).
 
 **Downloads:** https://github.com/Gerglem/gremlin-dna/tree/main/files — current release
-**v2.5.07**. The `current` files are always the newest build; the `v2.5.07` files are
-that exact build and never change. See
-[naming](RELEASE-NOTES.md#how-the-files-are-named).
-- `gremlin_current_theme.ecigtheme` (or `gremlin_v2.5.07_theme.ecigtheme`): the theme on its own
-- `gremlin_current.ecig` (or `gremlin_v2.5.07.ecig`): the full setup — the theme plus the four profiles, with cold resistance cleared so you measure your own
+**v2.5**. The `current` files are always the newest release; the `v2.5` files are that
+exact release and never change. The build number inside the theme is finer-grained than
+the release name — see
+[versions and the build number](RELEASE-NOTES.md#versions-and-the-build-number).
+- `gremlin_current_theme.ecigtheme` (or `gremlin_v2.5_theme.ecigtheme`): the theme on its own
+- `gremlin_current.ecig` (or `gremlin_v2.5.ecig`): the full setup — the theme plus the four profiles, with cold resistance cleared so you measure your own
 - `materials/dtv5xl-tcr200.csv` and `materials/questcup-tcr125.csv`: the TCR material curves
 - `profiles/DTv5XL-Profile.ecigprofile`, `QuestCup.ecigprofile`, `DTv5XL-Clean.ecigprofile`, `QuestCup-Clean.ecigprofile`
 
