@@ -1,0 +1,28 @@
+#!/bin/sh
+# Blocks a push whose HISTORY contains an identifying string, not just its working
+# tree. A clean checkout says nothing about what an old commit holds, and a push is
+# the point of no return: a later force-push does NOT remove objects from GitHub, only
+# Support can garbage-collect them.
+#
+# Same arrangement as pre-commit: the scanner and the patterns live in the private
+# repo, this tree is passed as --root, and every failure is an exit 1.
+
+PRIVATE="${GREMLIN_PRIVATE_REPO:-$HOME/gremlin-dna-theme}"
+SCANNER="$PRIVATE/tools/check-privacy.py"
+TREE=$(git rev-parse --show-toplevel) || exit 1
+
+if [ ! -f "$SCANNER" ]; then
+    echo ""
+    echo "PUSH BLOCKED: cannot find the privacy scanner."
+    echo "  looked for: $SCANNER"
+    echo "Refusing to push unscanned. See the private repo's kb/12."
+    exit 1
+fi
+
+echo "pre-push: scanning every blob in history (this takes about a minute)..."
+python "$SCANNER" --root "$TREE" --require-patterns --history --quiet || {
+    echo ""
+    echo "PUSH BLOCKED. An identifying string is in the history, not just the"
+    echo "working tree. Once pushed it cannot be taken back by force-pushing."
+    exit 1
+}

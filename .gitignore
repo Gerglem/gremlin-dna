@@ -2,3 +2,10 @@
 *.bom-bak
 Thumbs.db
 .DS_Store
+
+# Belt and braces. The privacy gate's pattern list is the set of names, addresses
+# and serials that must never appear in this repo - so a copy of it HERE would
+# publish exactly what it exists to keep out. It lives in the private repo only,
+# and hooks/pre-commit reads it from there by absolute path. This line is so a
+# stray copy cannot be swept up by `git add -A`, not because one is expected.
+.privacy-patterns

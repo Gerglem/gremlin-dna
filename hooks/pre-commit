@@ -1,0 +1,47 @@
+#!/bin/sh
+# Blocks a commit that would put an identifying string into this public repo.
+#
+# Installed by:  git config core.hooksPath hooks
+#
+# This repo is public, so a leak here is irreversible: a force-push does not remove
+# objects from GitHub, only Support can garbage-collect them. The gate therefore runs
+# before the commit, not before the push.
+#
+# THE SCANNER AND ITS PATTERNS LIVE IN THE PRIVATE REPO, ON PURPOSE. The patterns are
+# the names, addresses and serials that must never appear here; a file listing them,
+# committed here, would publish exactly what it exists to keep out - even gitignored,
+# one `git add -f` or one `--include-ignored` scan away. So this hook calls the private
+# checkout's tools/check-privacy.py by absolute path and passes this tree as --root.
+# The private repo's kb/12 documents setting this up after a fresh clone.
+#
+# FAIL CLOSED. Every path out of this script that is not a clean scan is an exit 1:
+# no private checkout, no scanner, no pattern file. A privacy gate that degrades to
+# "pass" when it cannot find its patterns is worse than no gate, because it is trusted.
+
+PRIVATE="${GREMLIN_PRIVATE_REPO:-$HOME/gremlin-dna-theme}"
+SCANNER="$PRIVATE/tools/check-privacy.py"
+TREE=$(git rev-parse --show-toplevel) || exit 1
+
+if [ ! -f "$SCANNER" ]; then
+    echo ""
+    echo "COMMIT BLOCKED: cannot find the privacy scanner."
+    echo "  looked for: $SCANNER"
+    echo ""
+    echo "This public repo is gated by the private repo's tools/check-privacy.py and"
+    echo "its .privacy-patterns, which are deliberately not kept here. Clone the"
+    echo "private repo, or point GREMLIN_PRIVATE_REPO at it:"
+    echo ""
+    echo "  git config --local core.hooksPath hooks"
+    echo "  setx GREMLIN_PRIVATE_REPO \"%USERPROFILE%\\<private-checkout>\""
+    echo ""
+    echo "Refusing to commit unscanned. See the private repo's kb/12."
+    exit 1
+fi
+
+echo "pre-commit: scanning for identifying strings..."
+python "$SCANNER" --root "$TREE" --require-patterns --quiet || {
+    echo ""
+    echo "COMMIT BLOCKED. See the private repo's kb/12. Fix the file, or if this is a"
+    echo "false positive, commit with --no-verify and say so in the commit message."
+    exit 1
+}
