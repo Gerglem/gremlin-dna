@@ -31,9 +31,9 @@ versioned name carries the **release**, `v2.5` — never the build.
 
 | Name | Changes? | Use it for |
 |---|---|---|
-| `gremlin_vX.Y_theme.ecigtheme`, `gremlin_vX.Y.ecig` | **Never.** Published once and frozen | Knowing which release you have. Rolling back. For a bug report, read the build out of the file as well |
-| `gremlin_current_theme.ecigtheme`, `gremlin_current.ecig` | **Every release** | Links in guides and forum posts, where you want the newest build without editing the link |
-| `gremlin-theme.ecigtheme`, `gremlin-full-setup.ecig` | Every release | Nothing new — these are the original version-less names, kept because posts already link at them. They behave exactly like `current` |
+| `gremlin_vX.Y_theme.ecigtheme` | **Never.** Published once and frozen | Knowing which release you have. Rolling back. For a bug report, read the build out of the file as well |
+| `gremlin_current_theme.ecigtheme` | **Every release** | Links in guides and forum posts, where you want the newest build without editing the link |
+| `gremlin-theme.ecigtheme` | Every release | Nothing new — the original version-less name, kept because posts already link at it. It behaves exactly like `current` |
 
 `current` is a copy rather than a symlink because GitHub cannot serve a git symlink as
 a usable raw download. The files are under 50 KB, so the duplication is not worth
@@ -63,8 +63,6 @@ is nothing to decide:
 $r = "2.6"      # the release: major.minor, no build number
 Copy-Item "files\gremlin_v${r}_theme.ecigtheme" "files\gremlin_current_theme.ecigtheme" -Force
 Copy-Item "files\gremlin_v${r}_theme.ecigtheme" "files\gremlin-theme.ecigtheme"         -Force
-Copy-Item "files\gremlin_v${r}.ecig"            "files\gremlin_current.ecig"            -Force
-Copy-Item "files\gremlin_v${r}.ecig"            "files\gremlin-full-setup.ecig"         -Force
 ```
 
 Then bump the release in this file and in `README.md`, add the release entry below, and
@@ -74,8 +72,9 @@ deleted and nothing is renamed, so every link that ever worked keeps working.
 
 ## Gremlin: Color Themes — current release v2.5
 
-Shipped as `gremlin_v2.5_theme.ecigtheme` and `gremlin_v2.5.ecig`, and as the `current`
-and version-less copies of both. The build inside these files is **v2.5.07**.
+Shipped as `gremlin_v2.5_theme.ecigtheme`, and as the `current` and version-less copies
+of it. **The combined `.ecig` was withdrawn 2026-11-07 — see the note at the top of
+`README.md`.** The build inside these files is **v2.5.07**.
 
 The entries below are **builds** — the history inside release v2.5.
 

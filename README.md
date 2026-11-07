@@ -28,7 +28,6 @@ release, so a link to it keeps working.
 
 | File | What it does |
 |---|---|
-| [`gremlin_current.ecig`](files/gremlin_current.ecig) | Theme **plus** the four profiles and both TCR curves. **Replaces every setting on the mod.** |
 | [`gremlin_current_theme.ecigtheme`](files/gremlin_current_theme.ecigtheme) | The theme only. Keeps your profiles and settings. |
 | [`files/profiles/`](files/profiles/) | The four profiles individually: V5 XL, Quest, and a burn-off for each |
 | [`files/materials/`](files/materials/) | TCR curves — `dtv5xl-tcr200.csv` and `questcup-tcr125.csv` |
@@ -39,13 +38,30 @@ changes once it is published:
 
 | File | |
 |---|---|
-| [`gremlin_v2.5.ecig`](files/gremlin_v2.5.ecig) | full setup, v2.5 |
 | [`gremlin_v2.5_theme.ecigtheme`](files/gremlin_v2.5_theme.ecigtheme) | theme only, v2.5 |
 
-Two older names, [`gremlin-theme.ecigtheme`](files/gremlin-theme.ecigtheme) and
-[`gremlin-full-setup.ecig`](files/gremlin-full-setup.ecig), are still here and still
-track the current release. Forum posts link straight at them, so they are not going
-away — but new links should use `current` or a version.
+One older name, [`gremlin-theme.ecigtheme`](files/gremlin-theme.ecigtheme), is still
+here and still tracks the current release. Forum posts link straight at it, so it is
+not going away — but new links should use `current` or a version.
+
+> ### The combined `.ecig` files were withdrawn on 2026-11-07
+>
+> `gremlin_current.ecig`, `gremlin_v2.5.ecig` and `gremlin-full-setup.ecig` are gone,
+> and **an old link to one of them will 404.** That is deliberate.
+>
+> They carried **Max USB Charge Rate = 3.0 A**. Loading a config does not merge — it
+> writes *every* setting the board has, so anyone who had deliberately set a slower
+> charge rate for their own cells would have been put back to 3 A **without being told
+> and without having asked**. Leaving the setting out of the file would not have helped:
+> an omitted setting is written as its default, and the default is 3 A.
+>
+> **Nothing is lost.** The theme, the four profiles and both TCR curves are all still
+> here as separate files, and the
+> [setup guide](setup-gremlin-theme-profiles-calibration.md) walks through loading them —
+> it is a few more clicks and it leaves your own battery settings alone.
+>
+> A corrected combined file may return once it ships the safer rate deliberately rather
+> than inheriting one.
 
 **Back up your own setup first** — in EScribe, `File -> Save`.
 

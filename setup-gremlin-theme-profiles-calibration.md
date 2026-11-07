@@ -11,7 +11,7 @@ exact release and never change. The build number inside the theme is finer-grain
 the release name — see
 [versions and the build number](RELEASE-NOTES.md#versions-and-the-build-number).
 - `gremlin_current_theme.ecigtheme` (or `gremlin_v2.5_theme.ecigtheme`): the theme on its own
-- `gremlin_current.ecig` (or `gremlin_v2.5.ecig`): the full setup — the theme plus the four profiles, with cold resistance cleared so you measure your own
+- ~~`gremlin_current.ecig`~~ — **the combined file was withdrawn 2026-11-07** because it also set your USB charge rate to 3.0 A, overriding a slower one you may have chosen on purpose. Load the theme, the profiles and the curves below instead; it is a few more clicks and it leaves your battery settings alone. See the note in `README.md`
 - `materials/dtv5xl-tcr200.csv` and `materials/questcup-tcr125.csv`: the TCR material curves
 - `profiles/DTv5XL-Profile.ecigprofile`, `QuestCup.ecigprofile`, `DTv5XL-Clean.ecigprofile`, `QuestCup-Clean.ecigprofile`
 
