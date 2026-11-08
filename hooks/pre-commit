@@ -20,6 +20,7 @@
 
 PRIVATE="${GREMLIN_PRIVATE_REPO:-$HOME/gremlin-dna-theme}"
 SCANNER="$PRIVATE/tools/check-privacy.py"
+CONFIG_GATE="$PRIVATE/tools/check-staged-config.py"
 TREE=$(git rev-parse --show-toplevel) || exit 1
 
 if [ ! -f "$SCANNER" ]; then
@@ -35,6 +36,44 @@ if [ ! -f "$SCANNER" ]; then
     echo "  setx GREMLIN_PRIVATE_REPO \"%USERPROFILE%\\<private-checkout>\""
     echo ""
     echo "Refusing to commit unscanned. See the private repo's kb/12."
+    exit 1
+fi
+
+# THE CONFIG GATE RUNS FIRST, AND IT WAS MISSING UNTIL 2026-11-07.
+#
+# The private repo's pre-commit has run check-staged-config.py since it existed.
+# THIS repo - the one that actually hands configs to strangers - had only the
+# privacy scanner. That asymmetry is how `gremlin-full-setup.ecig` shipped
+# carrying **Max USB Charge Rate = 3.0 A**: nothing mechanical was looking at
+# the settings, only at the identifiers. The file was withdrawn from HEAD and
+# from the release assets; it is still reachable in history and in the tag
+# archive, which kb/12 records as a deliberate trade.
+#
+# A privacy gate and a config gate answer different questions. "Does this leak
+# who he is" is not "is this safe to load on a stranger's mod", and only the
+# second one could have caught a charge rate.
+#
+# Ordered first on purpose: it names a safety value, so its message should be
+# the one a maintainer reads, not the second thing after an identifier scan.
+if [ -f "$CONFIG_GATE" ]; then
+    echo "pre-commit: checking staged configs for unsafe or personal values..."
+    python -I "$CONFIG_GATE" --quiet || {
+        echo ""
+        echo "COMMIT BLOCKED: a staged config carries a value that must not be published."
+        echo "See the private repo's kb/12. Cold ohms 0, ohm lock 0, reference temp 70,"
+        echo "the Evolv default unlock passwords, and EvolvBatteryLowChargeRate = 1."
+        echo ""
+        echo "ABSENCE OF THE CHARGE RATE IS A FAILURE, NOT A PASS: an omitted setting is"
+        echo "written as the board default, which is the fast 3.0 A rate."
+        exit 1
+    }
+else
+    echo ""
+    echo "COMMIT BLOCKED: cannot find the config gate."
+    echo "  looked for: $CONFIG_GATE"
+    echo ""
+    echo "Fail closed, same as the privacy scanner above: this repo publishes configs"
+    echo "and must not do so unchecked. See the private repo's kb/12."
     exit 1
 fi
 

@@ -96,21 +96,20 @@ out of the file or off the mod.
 The profiles and the TCR curves carry **no version at all**. The EScribe profile format
 has nowhere to put one, and the TCR curves are material data rather than a build, so
 both are revised in place. If you need a known-good theme-and-profile combination, take
-a versioned `.ecig` — it has everything inside it.
+**the files from a single tagged release** — everything published under one tag was built
+and checked together.
 
 What changed in each release: [`RELEASE-NOTES.md`](RELEASE-NOTES.md).
 
 ## Installing
 
-All three paths go through EScribe over USB. **Back up what you have first:
+Both paths go through EScribe over USB. **Back up what you have first:
 `File -> Save`.** Nothing here is reversible from the mod itself.
 
 1. Connect the mod by USB and open EScribe. It should say it is connected before you
    go further; if it does not, try a different cable, since plenty of USB-C cables are
    charge-only.
 2. Pick one:
-   - **Full setup** (easiest, replaces everything): `File -> Open` the `.ecig`, then
-     **Upload Settings to Device**.
    - **Theme only** (keeps your profiles): **Theme** tab, load the `.ecigtheme`, then
      **Upload Settings to Device**.
    - **A single profile**: **General** tab, pick an empty profile slot, **Load Profile**,

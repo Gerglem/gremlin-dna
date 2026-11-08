@@ -41,7 +41,7 @@ removing — and removing it would break links that already exist.
 
 The profiles in `files/profiles/` and the TCR curves in `files/materials/` are **not
 versioned**: the EScribe profile format has no field for a version, and the TCR curves
-are material data. They are revised in place, and a versioned `.ecig` is the way to pin
+are material data. They are revised in place, and a tagged release is the way to pin
 a whole known-good set.
 
 ### A note on the `v2.5.07` tag
@@ -110,5 +110,7 @@ who depend on it. Coming once that check is done.
 - `Pwr bank` is still listed on the LOCK menu and does nothing on a DNA100C — it
   will not take focus. Harmless, but it is a row that does not work.
 
-- Session time differs between the standalone profile files and the full-setup config.
+- ~~Session time differs between the standalone profile files and the full-setup config.~~
+  Moot since 2026-11-07: the full-setup config was withdrawn, so the standalone profiles
+  are the only source and there is nothing left to disagree with.
   Being reconciled; set it to what you want on the mod in the meantime.
