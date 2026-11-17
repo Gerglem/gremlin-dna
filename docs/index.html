@@ -24,7 +24,10 @@
 <body>
 <header>
   <button id="conn">Connect</button>
-  <button id="run">Run L4 test</button>
+  <button data-suite="refuse">L4.3–4 refusals</button>
+  <button data-suite="reads">L4.5 reads</button>
+  <button data-suite="charge">L4.7 charge on/off</button>
+  <button data-suite="amps3">Charge at 3.0 A</button>
   <button class="alt" data-cmd="!status">!status</button>
   <button class="alt" data-cmd="X=1 BUTTONS">X=1 BUTTONS</button>
   <button class="alt" data-cmd="F=1">F=1</button>
@@ -97,23 +100,42 @@ $('conn').onclick = () => (dev && dev.gatt.connected) ? dev.gatt.disconnect() : 
 // L4.3 + L4.4 in one tap (kb/45): status, then the two must-refuse lines.
 const wait = ms => new Promise(r => setTimeout(r, ms));
 function since(n) { return all.slice(n).join('\n'); }
-$('run').onclick = async () => {
-  add('== L4 run start', 'rx');
-  const r = {};
-  for (const c of ['!status', 'X=1 BUTTONS', 'F=1']) {
-    const n = all.length; await send(c); await wait(1500); r[c] = since(n);
-  }
-  const ok = {
-    'status reply': /up=\d+s/.test(r['!status']),
-    'X=1 refused': /REFUSED/.test(r['X=1 BUTTONS']),
-    'F=1 refused': /REFUSED/.test(r['F=1']),
-  };
-  const pass = Object.values(ok).every(Boolean);
-  const line = (pass ? 'PASS' : 'FAIL') + ' — ' + Object.entries(ok).map(([k, v]) => k + (v ? ' ✓' : ' ✗')).join(', ');
-  add('== ' + line, pass ? 'ref' : 'err');
-  const s = $('sum'); s.style.display = 'block'; s.textContent = line;
-  s.style.background = pass ? '#1d4d1d' : '#5a1d1d';
+const num = (re, t) => { const m = t.match(re); return m ? parseFloat(m[1]) : NaN; };
+const amps = t => num(/B=(-?\d+(?:\.\d+)?)A/, t);
+// Each suite: steps [cmd, waitMs]; check(r) gets {cmd: text received after it} and returns {name: bool}.
+const SUITES = {
+  refuse: { title: 'L4.3–4 refusals', steps: [['!status',1500],['X=1 BUTTONS',1500],['F=1',1500]],
+    check: r => ({ 'status reply': /up=\d+s/.test(r['!status']),
+                   'X=1 refused': /REFUSED/.test(r['X=1 BUTTONS']),
+                   'F=1 refused': /REFUSED/.test(r['F=1']) }) },
+  reads: { title: 'L4.5 reads', steps: [['E=GET PRODUCT',1500],['B=GET',1500],['X=GET MODE',1500],['R=GET COLD',1500]],
+    check: r => ({ 'product': /E=DNA/.test(r['E=GET PRODUCT']),
+                   'battery V': num(/B=(\d+\.\d+)V/, r['B=GET']) > 3,
+                   'mode': /X=\d+/.test(r['X=GET MODE']),
+                   'cold ohms': /R=\d/.test(r['R=GET COLD']) }) },
+  charge: { title: 'L4.7 charge on/off', steps: [['!chargeon',4000],['B=GETI',1500],['!chargeoff',4000],['B=GETI#2',1500]],
+    check: r => ({ 'on: B=GETI negative': amps(r['B=GETI']) < -0.3,
+                   'off: B=GETI ~0': amps(r['B=GETI#2']) > -0.2 }) },
+  amps3: { title: 'Charge at 3.0 A', steps: [['U=3.0A',4000],['B=GETI',1500],['U=GETI',1500]],
+    check: r => ({ 'charging (B=GETI negative)': amps(r['B=GETI']) < -0.3 }) },
 };
+let busy = false;
+async function runSuite(key) {
+  if (busy) return; busy = true;
+  const S = SUITES[key], r = {};
+  add('== ' + S.title + ' start', 'rx');
+  for (const [cmd, ms] of S.steps) {
+    const n = all.length; await send(cmd.split('#')[0]); await wait(ms); r[cmd] = since(n);
+  }
+  const ok = S.check(r);
+  const pass = Object.values(ok).every(Boolean);
+  const line = S.title + ': ' + (pass ? 'PASS' : 'FAIL') + ' — ' + Object.entries(ok).map(([k, v]) => k + (v ? ' ✓' : ' ✗')).join(', ');
+  add('== ' + line, pass ? 'ref' : 'err');
+  const el = $('sum'); el.style.display = 'block'; el.textContent = line;
+  el.style.background = pass ? '#1d4d1d' : '#5a1d1d';
+  busy = false;
+}
+document.querySelectorAll('[data-suite]').forEach(b => b.onclick = () => runSuite(b.dataset.suite));
 $('copy').onclick = async () => {
   try { await navigator.clipboard.writeText(all.join('\n')); add('-- copied ' + all.length + ' lines', 'rx'); }
   catch (e) {
