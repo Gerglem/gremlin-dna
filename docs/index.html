@@ -122,14 +122,21 @@ const SUITES = {
 let busy = false;
 async function runSuite(key) {
   if (busy) return; busy = true;
-  const S = SUITES[key], r = {};
+  const S = SUITES[key], r = {}, noReply = [];
   add('== ' + S.title + ' start', 'rx');
   for (const [cmd, ms] of S.steps) {
-    const n = all.length; await send(cmd.split('#')[0]); await wait(ms); r[cmd] = since(n);
+    const c = cmd.split('#')[0];
+    let n = all.length; await send(c); await wait(ms); r[cmd] = since(n);
+    // A read whose reply never came: say so and retry once (replies have been lost, kb/45 L4).
+    if (/GET/.test(c) && !/\n?< [A-Z]=/.test(r[cmd])) {
+      add('-- no reply to ' + c + ', retrying once', 'err');
+      n = all.length; await send(c); await wait(ms); r[cmd] = since(n);
+      if (!/< [A-Z]=/.test(r[cmd])) { noReply.push(c); }
+    }
   }
   const ok = S.check(r);
   const pass = Object.values(ok).every(Boolean);
-  const line = S.title + ': ' + (pass ? 'PASS' : 'FAIL') + ' — ' + Object.entries(ok).map(([k, v]) => k + (v ? ' ✓' : ' ✗')).join(', ');
+  const line = S.title + ': ' + (pass ? 'PASS' : noReply.length ? 'NO REPLY (' + noReply.join(', ') + ')' : 'FAIL') + ' — ' + Object.entries(ok).map(([k, v]) => k + (v ? ' ✓' : ' ✗')).join(', ');
   add('== ' + line, pass ? 'ref' : 'err');
   const el = $('sum'); el.style.display = 'block'; el.textContent = line;
   el.style.background = pass ? '#1d4d1d' : '#5a1d1d';
