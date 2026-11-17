@@ -3,64 +3,172 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Gremlin BLE Console</title>
-<!-- Gremlin bridge test console. Talks to a GremlinBridge over Web Bluetooth (use Bluefy on iPhone).
-     One BLE write per whole line. Nothing is sent anywhere except the bridge. -->
+<title>Gremlin BLE Panel</title>
+<!-- Gremlin bridge phone panel + test console. Talks to a GremlinBridge over Web Bluetooth (use Bluefy on iPhone).
+     One BLE write per whole line, one command in flight at a time. Nothing is sent anywhere except the bridge.
+     Read-only panel plus charge control; there is no firing or button feature, and the bridge refuses those anyway. -->
 <style>
-  :root { --bg:#111; --fg:#eee; --mut:#888; --ok:#6c6; --bad:#f66; --btn:#2b62e3; }
+  :root { --bg:#111; --fg:#eee; --mut:#888; --ok:#6c6; --bad:#f66; --warn:#fc6; --btn:#2b62e3; --card:#1b1b1b; --line:#2a2a2a; }
+  * { box-sizing:border-box; }
+  html, body { overflow-x:hidden; }
   body { margin:0; background:var(--bg); color:var(--fg); font:15px/1.4 -apple-system,system-ui,sans-serif; }
-  header { position:sticky; top:0; background:#1b1b1b; padding:10px 16px; display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
-  button { background:var(--btn); color:#fff; border:0; border-radius:8px; padding:10px 12px; font-size:15px; }
-  button.alt { background:#333; }
-  #state { color:var(--mut); font-size:13px; }
-  #sum { margin:8px 16px; padding:10px; border-radius:8px; font-weight:700; display:none; }
-  #log { padding:8px 16px 120px; font:13px/1.35 ui-monospace,Menlo,monospace; white-space:pre-wrap; word-break:break-all; }
-  .tx { color:#9cf; } .rx { color:var(--fg); } .ref { color:var(--ok); font-weight:600; } .err { color:var(--bad); }
-  form { position:fixed; bottom:0; left:0; right:0; display:flex; gap:8px; padding:10px 16px; background:#1b1b1b; }
-  input { flex:1; min-width:0; font-size:16px; padding:10px; border-radius:8px; border:1px solid #444; background:#000; color:var(--fg); }
+  header { position:sticky; top:0; z-index:2; background:var(--card); padding:10px 12px; display:flex; gap:10px; align-items:center; border-bottom:1px solid var(--line); }
+  #dot { width:12px; height:12px; border-radius:50%; background:#555; flex:none; }
+  #dot.on { background:var(--ok); } #dot.busy { background:var(--warn); }
+  #hdr { flex:1; min-width:0; }
+  #state { font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  #product { color:var(--mut); font-size:12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  button { background:var(--btn); color:#fff; border:0; border-radius:10px; padding:10px 12px; font-size:15px; font-weight:600; }
+  button.alt { background:#333; } button.stop { background:#7a2a2a; }
+  button:disabled { opacity:.45; }
+  #conn { min-width:120px; min-height:44px; }
+  main { padding:12px; }
+  .grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+  .tile { background:var(--card); border-radius:12px; padding:10px 12px; min-width:0; }
+  .tile .k { color:var(--mut); font-size:12px; text-transform:uppercase; letter-spacing:.04em; }
+  .tile .v { font-size:30px; font-weight:700; line-height:1.15; font-variant-numeric:tabular-nums; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .tile .s { color:var(--mut); font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .tile .s.ok { color:var(--ok); font-weight:600; } .tile .s.bad { color:var(--bad); font-weight:600; }
+  .stale .v { opacity:.4; }
+  .card { background:var(--card); border-radius:12px; padding:12px; margin-top:8px; }
+  .row { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+  .row > button { flex:1 1 40%; min-height:48px; }
+  .note { color:var(--mut); font-size:12px; margin-top:8px; }
+  select { font-size:16px; padding:8px; border-radius:8px; background:#000; color:var(--fg); border:1px solid #444; }
+  details { margin-top:12px; background:var(--card); border-radius:12px; }
+  summary { padding:12px; font-weight:600; cursor:pointer; }
+  details > .in { padding:0 12px 12px; }
+  .btns { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:8px; }
+  .btns button { padding:8px 10px; font-size:14px; }
+  #sum { margin:8px 0; padding:10px; border-radius:8px; font-weight:700; display:none; }
+  #log { background:#000; border-radius:8px; padding:8px; max-height:55vh; overflow-y:auto; font:12px/1.35 ui-monospace,Menlo,monospace; white-space:pre-wrap; word-break:break-all; }
+  .tx { color:#9cf; } .rx { color:var(--fg); } .ref { color:var(--ok); font-weight:600; } .err { color:var(--bad); } .poll { color:#777; }
+  form { display:flex; gap:8px; margin-top:8px; }
+  input[type=text] { flex:1; min-width:0; font-size:16px; padding:10px; border-radius:8px; border:1px solid #444; background:#000; color:var(--fg); }
   label { font-size:13px; color:var(--mut); }
 </style>
 </head>
 <body>
 <header>
+  <div id="dot"></div>
+  <div id="hdr"><div id="state">disconnected</div><div id="product"></div></div>
   <button id="conn">Connect</button>
-  <button data-suite="refuse">L4.3–4 refusals</button>
-  <button data-suite="reads">L4.5 reads</button>
-  <button data-suite="charge">L4.7 charge on/off</button>
-  <button data-suite="amps3">Charge at 3.0 A</button>
-  <button class="alt" data-cmd="!status">!status</button>
-  <button class="alt" data-cmd="X=1 BUTTONS">X=1 BUTTONS</button>
-  <button class="alt" data-cmd="F=1">F=1</button>
-  <button class="alt" id="copy">Copy results</button>
-  <button class="alt" id="clear">Clear</button>
-  <label><input type="checkbox" id="noise" style="flex:none;width:auto"> show heartbeats</label>
-  <span id="state">disconnected</span>
 </header>
-<div id="sum"></div>
-<div id="log"></div>
-<form id="f" autocomplete="off">
-  <input id="line" placeholder="command, e.g. E=GET VERSION" autocapitalize="off" autocorrect="off" spellcheck="false">
-  <button>Send</button>
-</form>
+<main>
+  <div class="grid" id="tiles">
+    <div class="tile stale" id="t-bat"><div class="k">Battery</div><div class="v">--</div><div class="s">--</div></div>
+    <div class="tile stale" id="t-cur"><div class="k">Battery current</div><div class="v">--</div><div class="s">--</div></div>
+    <div class="tile stale" id="t-usb"><div class="k">USB</div><div class="v">--</div><div class="s">--</div></div>
+    <div class="tile stale" id="t-temp"><div class="k">Board temp</div><div class="v">--</div><div class="s">&nbsp;</div></div>
+    <div class="tile stale" id="t-ohm"><div class="k">Cold ohms</div><div class="v">--</div><div class="s">stored</div></div>
+    <div class="tile stale" id="t-lock"><div class="k">Lock</div><div class="v">--</div><div class="s">--</div></div>
+    <div class="tile stale" id="t-puffs"><div class="k">Puffs</div><div class="v">--</div><div class="s">&nbsp;</div></div>
+    <div class="tile stale" id="t-last"><div class="k">Last puff</div><div class="v">--</div><div class="s">--</div></div>
+  </div>
+
+  <div class="card">
+    <div class="row" style="justify-content:space-between">
+      <label for="limit" style="font-size:15px;color:var(--fg)">Charge limit</label>
+      <select id="limit">
+        <option value="default">default</option>
+        <option>0.5</option><option>1.0</option><option>1.5</option>
+        <option>2.0</option><option>2.5</option><option>3.0</option>
+      </select>
+    </div>
+    <div class="row" style="margin-top:10px">
+      <button id="chargeNow">Charge now</button>
+      <button id="chargeStop" class="stop">Stop charging</button>
+    </div>
+    <div class="note" id="chgNote">The bridge turns charging off when you connect. Disconnect here restores charging at this limit first; closing the page without Disconnect leaves charging off.</div>
+  </div>
+
+  <details id="tests">
+    <summary>Tests &amp; console</summary>
+    <div class="in">
+      <div class="btns">
+        <button data-suite="refuse">L4.3–4 refusals</button>
+        <button data-suite="reads">L4.5 reads</button>
+        <button data-suite="charge">L4.7 charge on/off</button>
+        <button data-suite="amps3">Charge at 3.0 A</button>
+      </div>
+      <div class="btns">
+        <button class="alt" data-cmd="!status">!status</button>
+        <button class="alt" data-cmd="X=1 BUTTONS">X=1 BUTTONS (must refuse)</button>
+        <button class="alt" data-cmd="F=1">F=1 (must refuse)</button>
+      </div>
+      <div class="btns">
+        <button class="alt" id="copy">Copy results</button>
+        <button class="alt" id="clear">Clear</button>
+      </div>
+      <div class="row">
+        <label><input type="checkbox" id="noise"> show heartbeats</label>
+        <label><input type="checkbox" id="showPoll"> show polling</label>
+      </div>
+      <div id="sum"></div>
+      <div id="log"></div>
+      <form id="f" autocomplete="off">
+        <input type="text" id="line" placeholder="command, e.g. E=GET VERSION" autocapitalize="off" autocorrect="off" spellcheck="false">
+        <button>Send</button>
+      </form>
+    </div>
+  </details>
+</main>
 <script>
 const SVC = '6e400001-b5a3-f393-e0a9-e50e24dcca9e';
 const RX  = '6e400002-b5a3-f393-e0a9-e50e24dcca9e';
 const TX  = '6e400003-b5a3-f393-e0a9-e50e24dcca9e';
 const $ = id => document.getElementById(id);
 let dev = null, rx = null, buf = '';
+const wait = ms => new Promise(r => setTimeout(r, ms));
 
+// ---- log ----
 const all = [];
 function add(text, cls) {
   all.push(new Date().toISOString().slice(11,19) + ' ' + text);
   const d = document.createElement('div');
   d.className = cls; d.textContent = text;
-  $('log').appendChild(d);
-  window.scrollTo(0, document.body.scrollHeight);
+  const log = $('log'); log.appendChild(d);
+  log.scrollTop = log.scrollHeight;
 }
 function isNoise(l) { return /^# (hb |I \(|W \()/.test(l); }
+
+// ---- reply routing ----
+// Replies are FIFO with no ids. Poll commands register an "owed" reply pattern; the first matching line
+// is treated as the poll reply (updates tiles, hidden from the log unless "show polling"). Owed entries
+// expire so a lost poll reply can't swallow a later suite/manual reply.
+const OWED_MS = 3000;
+let owed = [];          // [{re, t}]
+let waiters = [];       // [{pred, poll, resolve, timer}]
+function consumeOwed(l) {
+  const now = Date.now();
+  owed = owed.filter(o => now - o.t < OWED_MS);
+  const i = owed.findIndex(o => o.re.test(l));
+  if (i < 0) return false;
+  owed.splice(i, 1); return true;
+}
+function waitFor(pred, ms, poll = false) {
+  return new Promise(resolve => {
+    const w = { pred, poll, resolve };
+    w.timer = setTimeout(() => { waiters = waiters.filter(x => x !== w); resolve(null); }, ms);
+    waiters.push(w);
+  });
+}
+function feedWaiters(l, poll) {
+  const w = waiters.find(x => x.poll === poll && x.pred(l));
+  if (!w) return;
+  clearTimeout(w.timer); waiters = waiters.filter(x => x !== w); w.resolve(l);
+}
 function onLine(l) {
   if (!l) return;
-  if (!$('noise').checked && isNoise(l)) return;
+  parse(l);
+  if (!/^# /.test(l) && consumeOwed(l)) {
+    if ($('showPoll').checked) add('<~ ' + l, 'poll');   // '<~' so suite reply checks ('< X=') never match it
+    feedWaiters(l, true);
+    return;
+  }
+  const noise = isNoise(l);
+  if (!noise) feedWaiters(l, false);
+  if (!$('noise').checked && noise) return;
   add('< ' + l, /REFUSED/.test(l) ? 'ref' : /ERR/.test(l) ? 'err' : 'rx');
 }
 function onNotify(e) {
@@ -73,36 +181,187 @@ function onNotify(e) {
 // Flush a trailing fragment after a short idle (notifications without \n).
 setInterval(() => { if (buf) { onLine(buf.trim()); buf = ''; } }, 400);
 
+// ---- tiles ----
+function tile(id, v, s, sCls) {
+  const t = $('t-' + id); t.classList.remove('stale');
+  if (v != null) t.querySelector('.v').textContent = v;
+  if (s != null) { const e = t.querySelector('.s'); e.textContent = s; e.className = 's' + (sCls ? ' ' + sCls : ''); }
+}
+// USB A (U=<n>A) is not tiled: the same reply shape echoes charge-limit sets (U=3.000A, the bridge's U=0A on connect).
+const usb = { w: null, v: null };
+let maxAmps = null;
+function showUsb() {
+  tile('usb', usb.w == null ? '--' : usb.w.toFixed(1) + ' W',
+       usb.v == null ? 'input' : usb.v.toFixed(2) + ' V');
+}
+const last = { w: null, s: null };
+function showLast() {
+  tile('last', last.w == null ? '--' : last.w.toFixed(1) + ' W', last.s == null ? '--' : last.s.toFixed(1) + ' s');
+}
+function parse(l) {
+  let m;
+  const N = '(-?\\d+(?:\\.\\d+)?)';
+  if ((m = l.match(new RegExp('^B=' + N + 'V$', 'i')))) tile('bat', parseFloat(m[1]).toFixed(2) + ' V');
+  else if ((m = l.match(new RegExp('^B=' + N + 'A$', 'i')))) {
+    const a = parseFloat(m[1]);
+    const chg = a < -0.05;               // negative battery current = charging
+    tile('cur', a.toFixed(2) + ' A', chg ? 'charging' : 'not charging', chg ? 'ok' : 'bad');
+  }
+  else if ((m = l.match(/^C=(\d+(?:\.\d+)?)%/))) { const t = $('t-bat'); t.querySelector('.s').textContent = m[1] + ' %'; }
+  else if ((m = l.match(new RegExp('^U=' + N + 'W$', 'i')))) { usb.w = parseFloat(m[1]); showUsb(); }
+  else if ((m = l.match(new RegExp('^U=' + N + 'V$', 'i')))) { usb.v = parseFloat(m[1]); showUsb(); }
+  else if ((m = l.match(/^U=A:(\d+(?:\.\d+)?)/i))) { maxAmps = parseFloat(m[1]); showMax(); }
+  else if ((m = l.match(new RegExp('^T=' + N + '([FC])$', 'i')))) tile('temp', parseFloat(m[1]).toFixed(1) + '°' + m[2].toUpperCase());
+  else if ((m = l.match(new RegExp('^R=' + N + 'OHM$', 'i')))) tile('ohm', parseFloat(m[1]).toFixed(3) + ' Ω');
+  else if ((m = l.match(/^X=(\d+)$/))) {
+    const locked = (parseInt(m[1], 10) & 1) === 1;
+    tile('lock', locked ? 'LOCKED' : 'unlocked', 'mode ' + m[1], locked ? 'bad' : null);
+  }
+  else if ((m = l.match(/^S=(\d+)$/))) tile('puffs', m[1]);
+  else if ((m = l.match(new RegExp('^S=' + N + 'W$', 'i')))) { last.w = parseFloat(m[1]); showLast(); }
+  else if ((m = l.match(new RegExp('^S=' + N + 'S$', 'i')))) { last.s = parseFloat(m[1]); showLast(); }
+  else if ((m = l.match(/^E=(.+)$/)) && /^DNA/i.test(m[1])) $('product').textContent = m[1];
+}
+function staleAll() { document.querySelectorAll('.tile').forEach(t => t.classList.add('stale')); }
+
+// ---- command queue: one transaction at a time, shared by polling, suites, manual sends, charge buttons ----
+let lockP = Promise.resolve(), queued = 0;
+function withLock(fn) {
+  queued++; setDot();
+  const run = lockP.then(fn).finally(() => { queued--; setDot(); });
+  lockP = run.catch(() => {});
+  return run;
+}
+async function send(line, quiet = false) {
+  line = line.trim();
+  if (!line) return false;
+  if (!rx) { add('not connected', 'err'); return false; }
+  if (!quiet) add('> ' + line, 'tx');
+  else if ($('showPoll').checked) add('>~ ' + line, 'poll');
+  try { await rx.writeValue(new TextEncoder().encode(line)); return true; }
+  catch (err) { add('write failed: ' + err, 'err'); return false; }
+}
+// Manual send: wait for the reply (matching LETTER= prefix, or a board line) or 1.5 s before releasing the queue.
+function sendManual(line) {
+  return withLock(async () => {
+    const m = line.trim().match(/^([A-Za-z])=/);
+    const pred = m ? (l => l.toUpperCase().startsWith(m[1].toUpperCase() + '=') || /^# /.test(l)) : (l => /^# /.test(l));
+    const w = waitFor(pred, 1500);
+    if (await send(line)) await w;
+  });
+}
+
+// ---- charging ----
+const LKEY = 'gremlin.chargeLimit';
+function getLimit() { try { return localStorage.getItem(LKEY) || 'default'; } catch (e) { return $('limit').value; } }
+function setLimit(v) { try { localStorage.setItem(LKEY, v); } catch (e) {} }
+function limitAmps() { const v = $('limit').value; return v === 'default' ? null : parseFloat(v); }
+function showMax() {
+  $('chgNote').textContent = 'Mod reports max ' + maxAmps + ' A. The bridge turns charging off when you connect. Disconnect here restores charging at this limit first; closing the page without Disconnect leaves charging off.';
+}
+// Must be called inside withLock (or a suite). amps=null -> mod default.
+// New firmware: '!chargeon <amps>'. Old firmware answers 'unknown board command' -> fall back to raw U=<amps>A.
+async function chargeOn(amps) {
+  const cmd = amps == null ? '!chargeon' : '!chargeon ' + amps.toFixed(1);
+  const w = waitFor(l => /^# /.test(l), 1500);
+  if (!(await send(cmd))) return null;
+  const l = await w;
+  if (amps != null && l && /unknown board command/i.test(l)) {
+    add('-- old bridge firmware: falling back to raw U=' + amps.toFixed(1) + 'A', 'err');
+    const w2 = waitFor(x => /^U=/i.test(x) || /^# /.test(x), 1500);
+    await send('U=' + amps.toFixed(1) + 'A');
+    return await w2;
+  }
+  return l;
+}
+async function chargeOff() {
+  const w = waitFor(l => /^# /.test(l), 1500);
+  if (await send('!chargeoff')) await w;
+}
+
+// ---- polling ----
+const P = (cmd, re) => ({ cmd, re });
+const FAST = [P('B=GET', /^B=-?[\d.]+V$/i), P('B=GETI', /^B=-?[\d.]+A$/i), P('U=GETP', /^U=-?[\d.]+W$/i)];
+const SLOW = [P('C=GET%', /^C=\d/), P('T=GET BOARD', /^T=-?[\d.]+[FC]$/i), P('R=GET COLD', /^R=[\d.]+OHM$/i),
+              P('X=GET MODE', /^X=\d+$/), P('S=GET PUFFS', /^S=\d+$/), P('S=GET LAST POWER', /^S=[\d.]+W$/i),
+              P('S=GET LAST TIME', /^S=[\d.]+S$/i)];
+const ONCE = [P('E=GET PRODUCT', /^E=/), P('U=GET INFO', /^U=A:/i)];
+const FAST_MS = 2000, SLOW_MS = 15000;
+let pollTimer = null, lastSlow = 0, onceDone = false, suiteRunning = false, closing = false;
+async function pollOne(p) {
+  owed.push({ re: p.re, t: Date.now() });
+  const w = waitFor(l => p.re.test(l), 1200, true);
+  if (!(await send(p.cmd, true))) return;
+  await w;
+}
+async function pollTick() {
+  if (!rx || queued > 0 || suiteRunning || closing) return;   // never queue behind other work
+  await withLock(async () => {
+    const set = FAST.slice();
+    if (!onceDone) { set.unshift(...ONCE); onceDone = true; }
+    if (Date.now() - lastSlow >= SLOW_MS) { set.push(...SLOW); lastSlow = Date.now(); }
+    for (const p of set) { if (!rx || closing) break; await pollOne(p); }
+  });
+}
+function startPoll() { stopPoll(); lastSlow = 0; onceDone = false; pollTimer = setInterval(pollTick, FAST_MS); setTimeout(pollTick, 500); }
+function stopPoll() { if (pollTimer) clearInterval(pollTimer); pollTimer = null; }
+
+// ---- connect / disconnect ----
+function setDot() {
+  const d = $('dot'); d.className = rx ? (queued > 0 && (suiteRunning || closing) ? 'busy' : 'on') : '';
+}
+function setState(t) { $('state').textContent = t; setDot(); }
+function onDisconnected() {
+  stopPoll(); rx = null; closing = false; owed = [];
+  waiters.forEach(w => { clearTimeout(w.timer); w.resolve(null); }); waiters = [];
+  setState('disconnected'); $('conn').textContent = 'Connect'; $('conn').disabled = false;
+  staleAll(); add('-- disconnected', 'err');
+}
 async function connect() {
-  if (!navigator.bluetooth) { add('No Web Bluetooth here. Use Bluefy.', 'err'); return; }
+  if (!navigator.bluetooth) { add('No Web Bluetooth here. Use Bluefy.', 'err'); setState('no Web Bluetooth (use Bluefy)'); return; }
   try {
     dev = await navigator.bluetooth.requestDevice({ filters: [{ namePrefix: 'Gremlin' }], optionalServices: [SVC] });
-    dev.addEventListener('gattserverdisconnected', () => { $('state').textContent = 'disconnected'; $('conn').textContent = 'Connect'; rx = null; add('-- disconnected', 'err'); });
+    dev.addEventListener('gattserverdisconnected', onDisconnected);
+    setState('connecting…');
     const gatt = await dev.gatt.connect();
     const svc = await gatt.getPrimaryService(SVC);
     rx = await svc.getCharacteristic(RX);
     const tx = await svc.getCharacteristic(TX);
     tx.addEventListener('characteristicvaluechanged', onNotify);
     await tx.startNotifications();
-    $('state').textContent = 'connected: ' + dev.name; $('conn').textContent = 'Disconnect';
-    add('-- connected to ' + dev.name, 'rx');
-  } catch (err) { add('connect failed: ' + err, 'err'); }
+    setState('connected: ' + dev.name); $('conn').textContent = 'Disconnect';
+    add('-- connected to ' + dev.name + ' (bridge turns charging off)', 'rx');
+    startPoll();
+  } catch (err) { add('connect failed: ' + err, 'err'); setState(rx ? 'connected: ' + dev.name : 'disconnected'); }
 }
-async function send(line) {
-  line = line.trim();
-  if (!line) return;
-  if (!rx) { add('not connected', 'err'); return; }
-  add('> ' + line, 'tx');
-  try { await rx.writeValue(new TextEncoder().encode(line)); }
-  catch (err) { add('write failed: ' + err, 'err'); }
+// Disconnect = restore charging at the saved limit, then disconnect.
+async function disconnect() {
+  if (closing) return;
+  closing = true; stopPoll(); $('conn').disabled = true;
+  setState('restoring charging…');
+  try {
+    await withLock(async () => {
+      const a = limitAmps();
+      add('-- restoring charging (' + (a == null ? 'default' : a.toFixed(1) + ' A') + ') before disconnect', 'rx');
+      await chargeOn(a);
+    });
+  } catch (e) { add('restore failed: ' + e, 'err'); }
+  if (dev && dev.gatt.connected) dev.gatt.disconnect(); else onDisconnected();
 }
-$('conn').onclick = () => (dev && dev.gatt.connected) ? dev.gatt.disconnect() : connect();
-// L4.3 + L4.4 in one tap (kb/45): status, then the two must-refuse lines.
-const wait = ms => new Promise(r => setTimeout(r, ms));
+$('conn').onclick = () => (dev && dev.gatt.connected && rx) ? disconnect() : connect();
+
+$('limit').value = getLimit();
+if (![...$('limit').options].some(o => o.value === $('limit').value)) $('limit').value = 'default';
+$('limit').onchange = () => setLimit($('limit').value);
+$('chargeNow').onclick = () => { if (!rx) return add('not connected', 'err'); withLock(() => chargeOn(limitAmps())); };
+$('chargeStop').onclick = () => { if (!rx) return add('not connected', 'err'); withLock(chargeOff); };
+
+// ---- test suites ----
 function since(n) { return all.slice(n).join('\n'); }
 const num = (re, t) => { const m = t.match(re); return m ? parseFloat(m[1]) : NaN; };
 const amps = t => num(/B=(-?\d+(?:\.\d+)?)A/, t);
 // Each suite: steps [cmd, waitMs]; check(r) gets {cmd: text received after it} and returns {name: bool}.
+// A step whose cmd is '!chargeon <amps>' goes through chargeOn() (old-firmware fallback to raw U=).
 const SUITES = {
   refuse: { title: 'L4.3–4 refusals', steps: [['!status',1500],['X=1 BUTTONS',1500],['F=1',1500]],
     check: r => ({ 'status reply': /up=\d+s/.test(r['!status']),
@@ -116,17 +375,28 @@ const SUITES = {
   charge: { title: 'L4.7 charge on/off', steps: [['!chargeon',4000],['B=GETI',1500],['!chargeoff',4000],['B=GETI#2',1500]],
     check: r => ({ 'on: B=GETI negative': amps(r['B=GETI']) < -0.3,
                    'off: B=GETI ~0': amps(r['B=GETI#2']) > -0.2 }) },
-  amps3: { title: 'Charge at 3.0 A', steps: [['U=3.0A',4000],['B=GETI',1500],['U=GETI',1500]],
-    check: r => ({ 'charging (B=GETI negative)': amps(r['B=GETI']) < -0.3 }) },
+  amps3: { title: 'Charge at 3.0 A', steps: [['!chargeon 3.0',4000],['B=GETI',1500],['U=GETI',1500]],
+    check: r => ({ 'limit accepted': /# sent|< U=/.test(r['!chargeon 3.0']) && !/REFUSED/.test(r['!chargeon 3.0']),
+                   'charging (B=GETI negative)': amps(r['B=GETI']) < -0.3 }) },
 };
-let busy = false;
 async function runSuite(key) {
-  if (busy) return; busy = true;
+  if (suiteRunning) return;
+  if (!rx) { add('not connected', 'err'); return; }
+  suiteRunning = true;
+  document.querySelectorAll('[data-suite]').forEach(b => b.disabled = true);
+  try { await withLock(() => runSuiteLocked(key)); }
+  finally { suiteRunning = false; document.querySelectorAll('[data-suite]').forEach(b => b.disabled = false); setDot(); }
+}
+async function runSuiteLocked(key) {
   const S = SUITES[key], r = {}, noReply = [];
+  setDot();
   add('== ' + S.title + ' start', 'rx');
   for (const [cmd, ms] of S.steps) {
     const c = cmd.split('#')[0];
-    let n = all.length; await send(c); await wait(ms); r[cmd] = since(n);
+    const ca = c.match(/^!chargeon\s+(\d+(?:\.\d+)?)$/);
+    let n = all.length;
+    if (ca) await chargeOn(parseFloat(ca[1])); else await send(c);
+    await wait(ms); r[cmd] = since(n);
     // A read whose reply never came: say so and retry once (replies have been lost, kb/45 L4).
     if (/GET/.test(c) && !/\n?< [A-Z]=/.test(r[cmd])) {
       add('-- no reply to ' + c + ', retrying once', 'err');
@@ -140,7 +410,6 @@ async function runSuite(key) {
   add('== ' + line, pass ? 'ref' : 'err');
   const el = $('sum'); el.style.display = 'block'; el.textContent = line;
   el.style.background = pass ? '#1d4d1d' : '#5a1d1d';
-  busy = false;
 }
 document.querySelectorAll('[data-suite]').forEach(b => b.onclick = () => runSuite(b.dataset.suite));
 $('copy').onclick = async () => {
@@ -153,8 +422,8 @@ $('copy').onclick = async () => {
   }
 };
 $('clear').onclick = () => { $('log').textContent = ''; all.length = 0; $('sum').style.display = 'none'; };
-document.querySelectorAll('[data-cmd]').forEach(b => b.onclick = () => send(b.dataset.cmd));
-$('f').onsubmit = e => { e.preventDefault(); send($('line').value); $('line').value = ''; };
+document.querySelectorAll('[data-cmd]').forEach(b => b.onclick = () => sendManual(b.dataset.cmd));
+$('f').onsubmit = e => { e.preventDefault(); sendManual($('line').value); $('line').value = ''; };
 </script>
 </body>
 </html>
