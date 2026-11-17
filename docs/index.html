@@ -46,6 +46,18 @@
   form { display:flex; gap:8px; margin-top:8px; }
   input[type=text] { flex:1; min-width:0; font-size:16px; padding:10px; border-radius:8px; border:1px solid #444; background:#000; color:var(--fg); }
   label { font-size:13px; color:var(--mut); }
+  #fire { display:none; margin:0 0 8px; border:2px solid var(--line); }
+  #fire.show { display:block; } #fire.on { border-color:var(--warn); }
+  .fhead { display:flex; justify-content:space-between; align-items:baseline; gap:8px; }
+  #f-state { font-weight:700; } #fire.on #f-state { color:var(--warn); }
+  #f-el { color:var(--mut); font-variant-numeric:tabular-nums; white-space:nowrap; }
+  #f-temp { font-size:46px; font-weight:800; line-height:1.1; font-variant-numeric:tabular-nums; white-space:nowrap; overflow:hidden; }
+  #fire:not(.on) #f-temp, #fire:not(.on) .fgrid .v { opacity:.55; }
+  .fgrid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:6px; margin-top:4px; }
+  .fgrid .k { color:var(--mut); font-size:11px; text-transform:uppercase; white-space:nowrap; }
+  .fgrid .v { font-size:17px; font-weight:700; font-variant-numeric:tabular-nums; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  #chart { display:block; width:100%; height:auto; margin-top:8px; }
+  #f-sum { color:var(--mut); font-size:13px; margin-top:6px; }
 </style>
 </head>
 <body>
@@ -55,6 +67,19 @@
   <button id="conn">Connect</button>
 </header>
 <main>
+  <div class="card" id="fire">
+    <div class="fhead"><span id="f-state">Firing</span><span id="f-el">0.0 s</span></div>
+    <div id="f-temp">--</div>
+    <div class="fgrid">
+      <div><div class="k">Watts</div><div class="v" id="f-w">--</div></div>
+      <div><div class="k">Coil V</div><div class="v" id="f-v">--</div></div>
+      <div><div class="k">Coil A</div><div class="v" id="f-a">--</div></div>
+      <div><div class="k">Hot Ω</div><div class="v" id="f-r">--</div></div>
+    </div>
+    <svg id="chart" viewBox="0 0 340 150" role="img" aria-label="coil temperature and watts over the puff"></svg>
+    <div id="f-sum"></div>
+  </div>
+
   <div class="grid" id="tiles">
     <div class="tile stale" id="t-bat"><div class="k">Battery</div><div class="v">--</div><div class="s">--</div></div>
     <div class="tile stale" id="t-cur"><div class="k">Battery current</div><div class="v">--</div><div class="s">--</div></div>
@@ -137,14 +162,16 @@ function isNoise(l) { return /^# (hb |I \(|W \()/.test(l); }
 // is treated as the poll reply (updates tiles, hidden from the log unless "show polling"). Owed entries
 // expire so a lost poll reply can't swallow a later suite/manual reply.
 const OWED_MS = 3000;
-let owed = [];          // [{re, t}]
+// Entries with a tag k (coil reads T/P/I/V) are handled by the poller from the reply it gets, not by parse():
+// coil T=224.91F has the same shape as the board temperature reply.
+let owed = [];          // [{re, t, k}]
 let waiters = [];       // [{pred, poll, resolve, timer}]
 function consumeOwed(l) {
   const now = Date.now();
   owed = owed.filter(o => now - o.t < OWED_MS);
   const i = owed.findIndex(o => o.re.test(l));
-  if (i < 0) return false;
-  owed.splice(i, 1); return true;
+  if (i < 0) return null;
+  return owed.splice(i, 1)[0];
 }
 function waitFor(pred, ms, poll = false) {
   return new Promise(resolve => {
@@ -160,8 +187,9 @@ function feedWaiters(l, poll) {
 }
 function onLine(l) {
   if (!l) return;
-  parse(l);
-  if (!/^# /.test(l) && consumeOwed(l)) {
+  const o = /^# /.test(l) ? null : consumeOwed(l);
+  if (!o || !o.k) parse(l);
+  if (o) {
     if ($('showPoll').checked) add('<~ ' + l, 'poll');   // '<~' so suite reply checks ('< X=') never match it
     feedWaiters(l, true);
     return;
@@ -194,9 +222,10 @@ function showUsb() {
   tile('usb', usb.w == null ? '--' : usb.w.toFixed(1) + ' W',
        usb.v == null ? 'input' : usb.v.toFixed(2) + ' V');
 }
-const last = { w: null, s: null };
+const last = { w: null, s: null, peak: null, pu: 'F', puffs: null };
 function showLast() {
-  tile('last', last.w == null ? '--' : last.w.toFixed(1) + ' W', last.s == null ? '--' : last.s.toFixed(1) + ' s');
+  tile('last', last.w == null ? '--' : last.w.toFixed(1) + ' W',
+       (last.s == null ? '--' : last.s.toFixed(1) + ' s') + (last.peak == null ? '' : ' · ' + last.peak.toFixed(0) + '°' + last.pu));
 }
 function parse(l) {
   let m;
@@ -204,8 +233,8 @@ function parse(l) {
   if ((m = l.match(new RegExp('^B=' + N + 'V$', 'i')))) tile('bat', parseFloat(m[1]).toFixed(2) + ' V');
   else if ((m = l.match(new RegExp('^B=' + N + 'A$', 'i')))) {
     const a = parseFloat(m[1]);
-    const chg = a < -0.05;               // negative battery current = charging
-    tile('cur', a.toFixed(2) + ' A', chg ? 'charging' : 'not charging', chg ? 'ok' : 'bad');
+    const chg = a < -0.05;               // negative battery current = charging; positive = discharging (firing)
+    tile('cur', a.toFixed(2) + ' A', chg ? 'charging' : a > 0.5 ? 'discharging' : 'not charging', chg ? 'ok' : a > 0.5 ? null : 'bad');
   }
   else if ((m = l.match(/^C=(\d+(?:\.\d+)?)%/))) { const t = $('t-bat'); t.querySelector('.s').textContent = m[1] + ' %'; }
   else if ((m = l.match(new RegExp('^U=' + N + 'W$', 'i')))) { usb.w = parseFloat(m[1]); showUsb(); }
@@ -217,9 +246,10 @@ function parse(l) {
     const locked = (parseInt(m[1], 10) & 1) === 1;
     tile('lock', locked ? 'LOCKED' : 'unlocked', 'mode ' + m[1], locked ? 'bad' : null);
   }
-  else if ((m = l.match(/^S=(\d+)$/))) tile('puffs', m[1]);
+  else if ((m = l.match(/^S=(\d+)$/))) { last.puffs = parseInt(m[1], 10); tile('puffs', m[1]); }
   else if ((m = l.match(new RegExp('^S=' + N + 'W$', 'i')))) { last.w = parseFloat(m[1]); showLast(); }
   else if ((m = l.match(new RegExp('^S=' + N + 'S$', 'i')))) { last.s = parseFloat(m[1]); showLast(); }
+  else if ((m = l.match(new RegExp('^S=' + N + '([FC])$', 'i')))) { last.peak = parseFloat(m[1]); last.pu = m[2].toUpperCase(); showLast(); }
   else if ((m = l.match(/^E=(.+)$/)) && /^DNA/i.test(m[1])) $('product').textContent = m[1];
 }
 function staleAll() { document.querySelectorAll('.tile').forEach(t => t.classList.add('stale')); }
@@ -280,31 +310,147 @@ async function chargeOff() {
 }
 
 // ---- polling ----
-const P = (cmd, re) => ({ cmd, re });
+const P = (cmd, re, k) => ({ cmd, re, k });
+// Coil reads answer '?' at idle and numbers only while the mod's own button is firing.
+const COIL = [P('T=GET', /^T=(?:-?[\d.]+[FC]|\?)$/i, 'T'), P('P=GET', /^P=(?:-?[\d.]+W|\?)$/i, 'P'),
+              P('I=GET', /^I=(?:-?[\d.]+A|\?)$/i, 'I'), P('V=GET', /^V=(?:-?[\d.]+V|\?)$/i, 'V')];
 const FAST = [P('B=GET', /^B=-?[\d.]+V$/i), P('B=GETI', /^B=-?[\d.]+A$/i), P('U=GETP', /^U=-?[\d.]+W$/i)];
 const SLOW = [P('C=GET%', /^C=\d/), P('T=GET BOARD', /^T=-?[\d.]+[FC]$/i), P('R=GET COLD', /^R=[\d.]+OHM$/i),
               P('X=GET MODE', /^X=\d+$/), P('S=GET PUFFS', /^S=\d+$/), P('S=GET LAST POWER', /^S=[\d.]+W$/i),
-              P('S=GET LAST TIME', /^S=[\d.]+S$/i)];
+              P('S=GET LAST TIME', /^S=[\d.]+S$/i), P('S=GET LAST PEAK TEMP', /^S=[\d.]+[FC]$/i)];
 const ONCE = [P('E=GET PRODUCT', /^E=/), P('U=GET INFO', /^U=A:/i)];
 const FAST_MS = 2000, SLOW_MS = 15000;
 let pollTimer = null, lastSlow = 0, onceDone = false, suiteRunning = false, closing = false;
+// Returns the reply line, or null if none came.
 async function pollOne(p) {
-  owed.push({ re: p.re, t: Date.now() });
+  owed.push({ re: p.re, t: Date.now(), k: p.k });
   const w = waitFor(l => p.re.test(l), 1200, true);
-  if (!(await send(p.cmd, true))) return;
-  await w;
+  if (!(await send(p.cmd, true))) return null;
+  return await w;
 }
+// Normal: T=GET + FAST every 2 s, SLOW every 15 s. A numeric T=GET switches to firing mode: T/P/I/V cycles
+// back to back (one lock per cycle, so suites/manual/charge work still gets in between) until T=GET says '?'
+// twice in a row; then the SLOW set runs at once for the new puff stats.
+let firing = false, fastT = null;
+function soon(ms) { clearTimeout(fastT); fastT = setTimeout(pollTick, ms); }
 async function pollTick() {
-  if (!rx || queued > 0 || suiteRunning || closing) return;   // never queue behind other work
+  if (!rx || suiteRunning || closing) return;
+  if (queued > 0) { if (firing) soon(150); return; }   // never queue behind other work
+  let again = false;
   await withLock(async () => {
-    const set = FAST.slice();
+    if (firing) { again = await fireCycle(); return; }
+    const set = [COIL[0], ...FAST];
     if (!onceDone) { set.unshift(...ONCE); onceDone = true; }
-    if (Date.now() - lastSlow >= SLOW_MS) { set.push(...SLOW); lastSlow = Date.now(); }
-    for (const p of set) { if (!rx || closing) break; await pollOne(p); }
+    const slow = Date.now() - lastSlow >= SLOW_MS;
+    if (slow) { set.push(...SLOW); lastSlow = Date.now(); }
+    let done = true;
+    for (const p of set) {
+      if (!rx || closing) { done = false; break; }
+      const l = await pollOne(p);
+      if (p.k === 'T' && coilVal(l)) { startPuff(); recordCycle({ T: coilVal(l) }); again = true; done = false; break; }
+    }
+    if (slow && done && postPuff) { postPuff = false; showPuffSummary(); }
   });
+  if (again && rx && !closing) soon(0);
 }
 function startPoll() { stopPoll(); lastSlow = 0; onceDone = false; pollTimer = setInterval(pollTick, FAST_MS); setTimeout(pollTick, 500); }
-function stopPoll() { if (pollTimer) clearInterval(pollTimer); pollTimer = null; }
+function stopPoll() { if (pollTimer) clearInterval(pollTimer); pollTimer = null; clearTimeout(fastT); }
+
+// ---- firing card ----
+const MAX_PTS = 600;
+let puff = null, postPuff = false, tQ = 0, tMiss = 0;
+function coilVal(l) {   // 'T=224.91F' -> {v:224.91, u:'F'}; 'T=?' or null -> null
+  const m = l && l.match(/^[A-Z]=(-?\d+(?:\.\d+)?)([A-Z])$/i);
+  return m ? { v: parseFloat(m[1]), u: m[2].toUpperCase() } : null;
+}
+function startPuff() {
+  firing = true; tQ = 0; tMiss = 0; postPuff = false;
+  puff = { t0: Date.now(), end: null, pts: [], u: 'F', peak: null, wSum: 0, wN: 0 };
+  $('fire').className = 'card show on'; $('f-state').textContent = 'Firing';
+  ['f-w', 'f-v', 'f-a', 'f-r'].forEach(id => $(id).textContent = '--');
+  $('f-sum').textContent = '';
+}
+function endPuff(readStats) {
+  firing = false; clearTimeout(fastT);
+  if (!puff) return;
+  puff.end = Date.now();
+  $('fire').className = 'card show'; $('f-state').textContent = 'Last puff';
+  showElapsed();
+  if (readStats) { postPuff = true; lastSlow = 0; $('f-sum').textContent = 'reading puff stats…'; }
+  else showPuffSummary();
+}
+// One firing-mode cycle (inside the lock). Returns true to schedule the next tick immediately.
+async function fireCycle() {
+  const cyc = {};
+  for (const p of (tQ > 0 ? [COIL[0]] : COIL)) {
+    if (!rx || closing) return false;
+    const l = await pollOne(p), x = coilVal(l);
+    if (p.k !== 'T') { if (x) cyc[p.k] = x; continue; }
+    if (l == null) { if (++tMiss >= 4) { endPuff(true); return true; } }   // lost replies: give up after 4
+    else if (!x) { tMiss = 0; if (++tQ >= 2) { endPuff(true); return true; } break; }
+    else { tQ = 0; tMiss = 0; cyc.T = x; }
+  }
+  recordCycle(cyc);
+  return true;
+}
+const fmt = (x, d, u) => x ? x.v.toFixed(d) + ' ' + u : '--';
+function recordCycle(c) {
+  if (!puff) return;
+  const t = (Date.now() - puff.t0) / 1000;
+  if (c.T) {
+    puff.u = c.T.u;
+    if (puff.peak == null || c.T.v > puff.peak) puff.peak = c.T.v;
+    if (puff.pts.length >= MAX_PTS) puff.pts.shift();
+    puff.pts.push({ t, T: c.T.v, W: c.P ? c.P.v : null });
+    $('f-temp').textContent = c.T.v.toFixed(0) + '°' + c.T.u;
+  }
+  if (c.P) { $('f-w').textContent = c.P.v.toFixed(1) + ' W'; puff.wSum += c.P.v; puff.wN++; }
+  if (c.V) $('f-v').textContent = fmt(c.V, 2, 'V');
+  if (c.I) $('f-a').textContent = fmt(c.I, 2, 'A');
+  // Hot resistance only from a V and I read in the same cycle; otherwise the last such value stands.
+  if (c.I && c.V && c.I.v > 0.05) $('f-r').textContent = (c.V.v / c.I.v).toFixed(3) + ' Ω';
+  showElapsed(); drawChart();
+}
+function showElapsed() {
+  if (puff) $('f-el').textContent = (((puff.end || Date.now()) - puff.t0) / 1000).toFixed(1) + ' s';
+}
+function showPuffSummary() {
+  if (!puff) return;
+  const pts = puff.pts;
+  if (last.s != null && last.w != null) {
+    $('f-sum').textContent = (last.puffs != null ? 'Puff #' + last.puffs + ': ' : 'Mod: ') + last.s.toFixed(1) + ' s' +
+      (last.peak != null ? ' · peak ' + last.peak.toFixed(0) + '°' + last.pu : '') + ' · avg ' + last.w.toFixed(1) + ' W';
+  } else {
+    const dur = (((puff.end || Date.now()) - puff.t0) / 1000);
+    $('f-sum').textContent = 'Seen here: ~' + dur.toFixed(1) + ' s' + (puff.peak != null ? ' · peak ' + puff.peak.toFixed(0) + '°' + puff.u : '') +
+      (puff.wN ? ' · avg ' + (puff.wSum / puff.wN).toFixed(1) + ' W' : '') + (pts.length ? '' : ' (no samples)');
+  }
+}
+// Inline SVG: coil temp (orange, left axis) and watts (blue, right axis) vs seconds.
+function drawChart() {
+  const svg = $('chart'), pts = puff ? puff.pts : [];
+  const W = 340, H = 150, L = 36, R = 304, T0 = 8, B = 128;
+  if (!pts.length) { svg.innerHTML = ''; return; }
+  const tMax = Math.max(5, pts[pts.length - 1].t);
+  let lo = Math.min(...pts.map(p => p.T)), hi = Math.max(...pts.map(p => p.T));
+  if (hi - lo < 40) { const mid = (hi + lo) / 2; lo = mid - 20; hi = mid + 20; }
+  lo = Math.floor(lo / 10) * 10; hi = Math.ceil(hi / 10) * 10;
+  const ws = pts.filter(p => p.W != null).map(p => p.W);
+  const wMax = ws.length ? Math.max(10, Math.ceil(Math.max(...ws) * 1.2 / 5) * 5) : 50;
+  const x = t => (L + (R - L) * t / tMax).toFixed(1);
+  const yT = v => (B - (B - T0) * (v - lo) / (hi - lo)).toFixed(1);
+  const yW = v => (B - (B - T0) * v / wMax).toFixed(1);
+  const line = (sel, y) => pts.filter(p => sel(p) != null).map(p => x(p.t) + ',' + y(sel(p))).join(' ');
+  const txt = (tx, ty, s, c, a) => `<text x="${tx}" y="${ty}" fill="${c}" font-size="11" text-anchor="${a}">${s}</text>`;
+  svg.innerHTML =
+    `<rect x="${L}" y="${T0}" width="${R - L}" height="${B - T0}" fill="none" stroke="#2a2a2a"/>` +
+    `<line x1="${L}" x2="${R}" y1="${(T0 + B) / 2}" y2="${(T0 + B) / 2}" stroke="#222"/>` +
+    `<polyline points="${line(p => p.W, yW)}" fill="none" stroke="#9cf" stroke-width="1.5" opacity=".8"/>` +
+    `<polyline points="${line(p => p.T, yT)}" fill="none" stroke="#f93" stroke-width="2.2"/>` +
+    txt(L - 4, T0 + 9, hi + '°', '#f93', 'end') + txt(L - 4, B, lo + '°', '#f93', 'end') +
+    txt(R + 4, T0 + 9, wMax + 'W', '#9cf', 'start') + txt(R + 4, B, '0', '#9cf', 'start') +
+    txt(L, H - 6, '0 s', '#888', 'start') + txt(R, H - 6, tMax.toFixed(0) + ' s', '#888', 'end');
+}
 
 // ---- connect / disconnect ----
 function setDot() {
@@ -313,6 +459,7 @@ function setDot() {
 function setState(t) { $('state').textContent = t; setDot(); }
 function onDisconnected() {
   stopPoll(); rx = null; closing = false; owed = [];
+  if (firing) endPuff(false);
   waiters.forEach(w => { clearTimeout(w.timer); w.resolve(null); }); waiters = [];
   setState('disconnected'); $('conn').textContent = 'Connect'; $('conn').disabled = false;
   staleAll(); add('-- disconnected', 'err');
