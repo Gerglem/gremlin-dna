@@ -58,6 +58,9 @@
   .fgrid .v { font-size:17px; font-weight:700; font-variant-numeric:tabular-nums; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   #chart { display:block; width:100%; height:auto; margin-top:8px; }
   #f-sum { color:var(--mut); font-size:13px; margin-top:6px; }
+  #absent { display:none; margin:0 0 8px; border:2px solid var(--warn); color:var(--warn); font-weight:600; }
+  #absent.show { display:block; } #state.warn { color:var(--warn); }
+  #tiles.absent .tile { opacity:.35; }
 </style>
 </head>
 <body>
@@ -79,6 +82,8 @@
     <svg id="chart" viewBox="0 0 340 150" role="img" aria-label="coil temperature and watts over the puff"></svg>
     <div id="f-sum"></div>
   </div>
+
+  <div class="card" id="absent">Mod not detected by the bridge — check the cable. Checking again every 5 s.</div>
 
   <div class="grid" id="tiles">
     <div class="tile stale" id="t-bat"><div class="k">Battery</div><div class="v">--</div><div class="s">--</div></div>
@@ -185,11 +190,21 @@ function feedWaiters(l, poll) {
   if (!w) return;
   clearTimeout(w.timer); waiters = waiters.filter(x => x !== w); w.resolve(l);
 }
+// Mod presence. The bridge answers every mod command with '# ERR not sent (mod absent)' (or
+// '# ERR mod absent — cannot send ...') when no mod is on the cable; !status / heartbeats carry mod=absent|ready.
+const ABSENT_RE = /^# .*\bERR\b.*mod absent|\bmod=absent\b/i;
+const PRESENT_RE = /\bmod=ready\b/i;
+let quietInflight = false;   // the command in flight is the panel's own poll/probe (send(.., true))
 function onLine(l) {
   if (!l) return;
-  const o = /^# /.test(l) ? null : consumeOwed(l);
+  const board = /^# /.test(l);
+  if (ABSENT_RE.test(l)) setAbsent(true);
+  else if (PRESENT_RE.test(l) || (!board && !/ERR|REFUSED/.test(l))) setAbsent(false);
+  const o = board ? null : consumeOwed(l);
   if (!o || !o.k) parse(l);
-  if (o) {
+  // A board line (ERR, !status reply) answering the panel's own poll/probe is routed like a poll reply.
+  const quietBoard = board && quietInflight && !isNoise(l) && waiters.some(w => w.poll && w.pred(l));
+  if (o || quietBoard) {
     if ($('showPoll').checked) add('<~ ' + l, 'poll');   // '<~' so suite reply checks ('< X=') never match it
     feedWaiters(l, true);
     return;
@@ -266,6 +281,7 @@ async function send(line, quiet = false) {
   line = line.trim();
   if (!line) return false;
   if (!rx) { add('not connected', 'err'); return false; }
+  quietInflight = quiet;
   if (!quiet) add('> ' + line, 'tx');
   else if ($('showPoll').checked) add('>~ ' + line, 'poll');
   try { await rx.writeValue(new TextEncoder().encode(line)); return true; }
@@ -320,13 +336,20 @@ const SLOW = [P('C=GET%', /^C=\d/), P('T=GET BOARD', /^T=-?[\d.]+[FC]$/i), P('R=
               P('S=GET LAST TIME', /^S=[\d.]+S$/i), P('S=GET LAST PEAK TEMP', /^S=[\d.]+[FC]$/i)];
 const ONCE = [P('E=GET PRODUCT', /^E=/), P('U=GET INFO', /^U=A:/i)];
 const FAST_MS = 2000, SLOW_MS = 15000;
-let pollTimer = null, lastSlow = 0, onceDone = false, suiteRunning = false, closing = false;
-// Returns the reply line, or null if none came.
+let pollTimer = null, lastSlow = 0, suiteRunning = false, closing = false;
+// ONCE reads repeat on later ticks until they get a real reply (max 3 tries made while the mod was present).
+let onceGot = {}, onceTries = {};
+const ERR_RE = /^# .*\bERR\b/i;
+// Returns the reply line (a '# ERR ...' line counts as the reply), or null if none came.
 async function pollOne(p) {
-  owed.push({ re: p.re, t: Date.now(), k: p.k });
-  const w = waitFor(l => p.re.test(l), 1200, true);
-  if (!(await send(p.cmd, true))) return null;
-  return await w;
+  const o = { re: p.re, t: Date.now(), k: p.k };
+  owed.push(o);
+  const w = waitFor(l => p.re.test(l) || ERR_RE.test(l), 1200, true);
+  let l = null;
+  if (await send(p.cmd, true)) l = await w;
+  quietInflight = false;
+  if (!l || !p.re.test(l)) owed = owed.filter(x => x !== o);   // don't let it swallow a later reply
+  return l;
 }
 // Normal: T=GET + FAST every 2 s, SLOW every 15 s. A numeric T=GET switches to firing mode: T/P/I/V cycles
 // back to back (one lock per cycle, so suites/manual/charge work still gets in between) until T=GET says '?'
@@ -334,27 +357,67 @@ async function pollOne(p) {
 let firing = false, fastT = null;
 function soon(ms) { clearTimeout(fastT); fastT = setTimeout(pollTick, ms); }
 async function pollTick() {
-  if (!rx || suiteRunning || closing) return;
+  if (!rx || suiteRunning || closing || modAbsent) return;
   if (queued > 0) { if (firing) soon(150); return; }   // never queue behind other work
   let again = false;
   await withLock(async () => {
     if (firing) { again = await fireCycle(); return; }
     const set = [COIL[0], ...FAST];
-    if (!onceDone) { set.unshift(...ONCE); onceDone = true; }
+    set.unshift(...ONCE.filter(p => !onceGot[p.cmd] && (onceTries[p.cmd] || 0) < 3));
     const slow = Date.now() - lastSlow >= SLOW_MS;
     if (slow) { set.push(...SLOW); lastSlow = Date.now(); }
     let done = true;
     for (const p of set) {
-      if (!rx || closing) { done = false; break; }
+      if (!rx || closing || modAbsent) { done = false; break; }
       const l = await pollOne(p);
+      if (ONCE.includes(p)) {
+        if (l && p.re.test(l)) onceGot[p.cmd] = true;
+        else if (!modAbsent) onceTries[p.cmd] = (onceTries[p.cmd] || 0) + 1;
+      }
       if (p.k === 'T' && coilVal(l)) { startPuff(); recordCycle({ T: coilVal(l) }); again = true; done = false; break; }
     }
     if (slow && done && postPuff) { postPuff = false; showPuffSummary(); }
   });
   if (again && rx && !closing) soon(0);
 }
-function startPoll() { stopPoll(); lastSlow = 0; onceDone = false; pollTimer = setInterval(pollTick, FAST_MS); setTimeout(pollTick, 500); }
+function startPoll(fresh = true) {
+  stopPoll(); lastSlow = 0;
+  if (fresh) { onceGot = {}; onceTries = {}; }
+  pollTimer = setInterval(pollTick, FAST_MS); setTimeout(pollTick, fresh ? 500 : 300);
+}
 function stopPoll() { if (pollTimer) clearInterval(pollTimer); pollTimer = null; clearTimeout(fastT); }
+
+// ---- mod absent: no fast/slow/firing polls, one quiet !status every 5 s until mod=ready ----
+const PROBE_MS = 5000;
+let modAbsent = false, probeTimer = null;
+function showAbsent(on) {
+  $('absent').classList.toggle('show', on); $('tiles').classList.toggle('absent', on);
+  $('state').classList.toggle('warn', on);
+  if (closing || !rx) return;
+  $('state').textContent = on ? 'Mod not detected — check the cable' : 'connected: ' + dev.name;
+}
+function setAbsent(on) {
+  if (on === modAbsent || !rx) return;
+  modAbsent = on;
+  if (on) {
+    stopPoll(); if (firing) endPuff(false); staleAll();
+    clearInterval(probeTimer); if (!closing) probeTimer = setInterval(probe, PROBE_MS);
+    add('-- mod not detected by the bridge (check the cable); polling paused, !status every 5 s', 'err');
+  } else {
+    clearInterval(probeTimer); probeTimer = null;
+    add('-- mod detected, polling resumed', 'rx');
+    if (!closing) startPoll(false);
+  }
+  showAbsent(on);
+}
+function probe() {
+  if (!rx || !modAbsent || closing || suiteRunning || queued > 0) return;
+  withLock(async () => {
+    const w = waitFor(l => /^# /.test(l) && !isNoise(l), 1500, true);
+    if (await send('!status', true)) await w;
+    quietInflight = false;
+  });
+}
 
 // ---- firing card ----
 const MAX_PTS = 600;
@@ -383,7 +446,7 @@ function endPuff(readStats) {
 async function fireCycle() {
   const cyc = {};
   for (const p of (tQ > 0 ? [COIL[0]] : COIL)) {
-    if (!rx || closing) return false;
+    if (!rx || closing || modAbsent) return false;
     const l = await pollOne(p), x = coilVal(l);
     if (p.k !== 'T') { if (x) cyc[p.k] = x; continue; }
     if (l == null) { if (++tMiss >= 4) { endPuff(true); return true; } }   // lost replies: give up after 4
@@ -459,6 +522,7 @@ function setDot() {
 function setState(t) { $('state').textContent = t; setDot(); }
 function onDisconnected() {
   stopPoll(); rx = null; closing = false; owed = [];
+  clearInterval(probeTimer); probeTimer = null; modAbsent = false; quietInflight = false; showAbsent(false);
   if (firing) endPuff(false);
   waiters.forEach(w => { clearTimeout(w.timer); w.resolve(null); }); waiters = [];
   setState('disconnected'); $('conn').textContent = 'Connect'; $('conn').disabled = false;
@@ -484,7 +548,7 @@ async function connect() {
 // Disconnect = restore charging at the saved limit, then disconnect.
 async function disconnect() {
   if (closing) return;
-  closing = true; stopPoll(); $('conn').disabled = true;
+  closing = true; stopPoll(); clearInterval(probeTimer); probeTimer = null; $('conn').disabled = true;
   setState('restoring charging…');
   try {
     await withLock(async () => {
