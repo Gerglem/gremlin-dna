@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gremlin BLE Console</title>
+<!-- Gremlin bridge test console. Talks to a GremlinBridge over Web Bluetooth (use Bluefy on iPhone).
+     One BLE write per whole line. Nothing is sent anywhere except the bridge. -->
+<style>
+  :root { --bg:#111; --fg:#eee; --mut:#888; --ok:#6c6; --bad:#f66; --btn:#2b62e3; }
+  body { margin:0; background:var(--bg); color:var(--fg); font:15px/1.4 -apple-system,system-ui,sans-serif; }
+  header { position:sticky; top:0; background:#1b1b1b; padding:10px 16px; display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+  button { background:var(--btn); color:#fff; border:0; border-radius:8px; padding:10px 12px; font-size:15px; }
+  button.alt { background:#333; }
+  #state { color:var(--mut); font-size:13px; }
+  #sum { margin:8px 16px; padding:10px; border-radius:8px; font-weight:700; display:none; }
+  #log { padding:8px 16px 120px; font:13px/1.35 ui-monospace,Menlo,monospace; white-space:pre-wrap; word-break:break-all; }
+  .tx { color:#9cf; } .rx { color:var(--fg); } .ref { color:var(--ok); font-weight:600; } .err { color:var(--bad); }
+  form { position:fixed; bottom:0; left:0; right:0; display:flex; gap:8px; padding:10px 16px; background:#1b1b1b; }
+  input { flex:1; min-width:0; font-size:16px; padding:10px; border-radius:8px; border:1px solid #444; background:#000; color:var(--fg); }
+  label { font-size:13px; color:var(--mut); }
+</style>
+</head>
+<body>
+<header>
+  <button id="conn">Connect</button>
+  <button id="run">Run L4 test</button>
+  <button class="alt" data-cmd="!status">!status</button>
+  <button class="alt" data-cmd="X=1 BUTTONS">X=1 BUTTONS</button>
+  <button class="alt" data-cmd="F=1">F=1</button>
+  <button class="alt" id="copy">Copy results</button>
+  <button class="alt" id="clear">Clear</button>
+  <label><input type="checkbox" id="noise" style="flex:none;width:auto"> show heartbeats</label>
+  <span id="state">disconnected</span>
+</header>
+<div id="sum"></div>
+<div id="log"></div>
+<form id="f" autocomplete="off">
+  <input id="line" placeholder="command, e.g. E=GET VERSION" autocapitalize="off" autocorrect="off" spellcheck="false">
+  <button>Send</button>
+</form>
+<script>
+const SVC = '6e400001-b5a3-f393-e0a9-e50e24dcca9e';
+const RX  = '6e400002-b5a3-f393-e0a9-e50e24dcca9e';
+const TX  = '6e400003-b5a3-f393-e0a9-e50e24dcca9e';
+const $ = id => document.getElementById(id);
+let dev = null, rx = null, buf = '';
+
+const all = [];
+function add(text, cls) {
+  all.push(new Date().toISOString().slice(11,19) + ' ' + text);
+  const d = document.createElement('div');
+  d.className = cls; d.textContent = text;
+  $('log').appendChild(d);
+  window.scrollTo(0, document.body.scrollHeight);
+}
+function isNoise(l) { return /^# (hb |I \(|W \()/.test(l); }
+function onLine(l) {
+  if (!l) return;
+  if (!$('noise').checked && isNoise(l)) return;
+  add('< ' + l, /REFUSED/.test(l) ? 'ref' : /ERR/.test(l) ? 'err' : 'rx');
+}
+function onNotify(e) {
+  buf += new TextDecoder().decode(e.target.value);
+  // Bridge separates with \n or by a leading '#'; split on either.
+  const parts = buf.split(/\r?\n|(?=# )/);
+  buf = parts.pop();
+  parts.forEach(p => onLine(p.trim()));
+}
+// Flush a trailing fragment after a short idle (notifications without \n).
+setInterval(() => { if (buf) { onLine(buf.trim()); buf = ''; } }, 400);
+
+async function connect() {
+  if (!navigator.bluetooth) { add('No Web Bluetooth here. Use Bluefy.', 'err'); return; }
+  try {
+    dev = await navigator.bluetooth.requestDevice({ filters: [{ namePrefix: 'Gremlin' }], optionalServices: [SVC] });
+    dev.addEventListener('gattserverdisconnected', () => { $('state').textContent = 'disconnected'; $('conn').textContent = 'Connect'; rx = null; add('-- disconnected', 'err'); });
+    const gatt = await dev.gatt.connect();
+    const svc = await gatt.getPrimaryService(SVC);
+    rx = await svc.getCharacteristic(RX);
+    const tx = await svc.getCharacteristic(TX);
+    tx.addEventListener('characteristicvaluechanged', onNotify);
+    await tx.startNotifications();
+    $('state').textContent = 'connected: ' + dev.name; $('conn').textContent = 'Disconnect';
+    add('-- connected to ' + dev.name, 'rx');
+  } catch (err) { add('connect failed: ' + err, 'err'); }
+}
+async function send(line) {
+  line = line.trim();
+  if (!line) return;
+  if (!rx) { add('not connected', 'err'); return; }
+  add('> ' + line, 'tx');
+  try { await rx.writeValue(new TextEncoder().encode(line)); }
+  catch (err) { add('write failed: ' + err, 'err'); }
+}
+$('conn').onclick = () => (dev && dev.gatt.connected) ? dev.gatt.disconnect() : connect();
+// L4.3 + L4.4 in one tap (kb/45): status, then the two must-refuse lines.
+const wait = ms => new Promise(r => setTimeout(r, ms));
+function since(n) { return all.slice(n).join('\n'); }
+$('run').onclick = async () => {
+  add('== L4 run start', 'rx');
+  const r = {};
+  for (const c of ['!status', 'X=1 BUTTONS', 'F=1']) {
+    const n = all.length; await send(c); await wait(1500); r[c] = since(n);
+  }
+  const ok = {
+    'status reply': /up=\d+s/.test(r['!status']),
+    'X=1 refused': /REFUSED/.test(r['X=1 BUTTONS']),
+    'F=1 refused': /REFUSED/.test(r['F=1']),
+  };
+  const pass = Object.values(ok).every(Boolean);
+  const line = (pass ? 'PASS' : 'FAIL') + ' — ' + Object.entries(ok).map(([k, v]) => k + (v ? ' ✓' : ' ✗')).join(', ');
+  add('== ' + line, pass ? 'ref' : 'err');
+  const s = $('sum'); s.style.display = 'block'; s.textContent = line;
+  s.style.background = pass ? '#1d4d1d' : '#5a1d1d';
+};
+$('copy').onclick = async () => {
+  try { await navigator.clipboard.writeText(all.join('\n')); add('-- copied ' + all.length + ' lines', 'rx'); }
+  catch (e) {
+    const t = document.createElement('textarea'); t.value = all.join('\n');
+    document.body.appendChild(t); t.select();
+    const ok = document.execCommand('copy'); t.remove();
+    add(ok ? '-- copied ' + all.length + ' lines' : 'copy failed: ' + e, ok ? 'rx' : 'err');
+  }
+};
+$('clear').onclick = () => { $('log').textContent = ''; all.length = 0; $('sum').style.display = 'none'; };
+document.querySelectorAll('[data-cmd]').forEach(b => b.onclick = () => send(b.dataset.cmd));
+$('f').onsubmit = e => { e.preventDefault(); send($('line').value); $('line').value = ''; };
+</script>
+</body>
+</html>
