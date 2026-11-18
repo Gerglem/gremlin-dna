@@ -6,7 +6,8 @@
 <title>Gremlin BLE Panel</title>
 <!-- Gremlin bridge phone panel + test console. Talks to a GremlinBridge over Web Bluetooth (use Bluefy on iPhone).
      One BLE write per whole line, one command in flight at a time. Nothing is sent anywhere except the bridge.
-     Read-only panel plus charge control; there is no firing or button feature, and the bridge refuses those anyway. -->
+     Read-only panel plus charge control; there is no firing or button feature, and the bridge refuses those anyway.
+     The puff log is kept only in this browser's localStorage on this device; the page makes no network requests. -->
 <style>
   :root { --bg:#111; --fg:#eee; --mut:#888; --ok:#6c6; --bad:#f66; --warn:#fc6; --btn:#2b62e3; --card:#1b1b1b; --line:#2a2a2a; }
   * { box-sizing:border-box; }
@@ -61,6 +62,11 @@
   #absent { display:none; margin:0 0 8px; border:2px solid var(--warn); color:var(--warn); font-weight:600; }
   #absent.show { display:block; } #state.warn { color:var(--warn); }
   #tiles.absent .tile { opacity:.35; }
+  #pl-today { color:var(--fg); font-size:14px; margin:0 0 8px; }
+  #pl-list { margin-top:4px; }
+  .pr { display:grid; grid-template-columns:minmax(0,1.6fr) repeat(3,minmax(0,1fr)); gap:6px; padding:10px 4px; border-top:1px solid var(--line); font-size:14px; font-variant-numeric:tabular-nums; cursor:pointer; }
+  .pr span { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; min-width:0; } .pr span + span { text-align:right; }
+  .pr.sel { background:#232a3a; border-radius:6px; }
 </style>
 </head>
 <body>
@@ -111,6 +117,21 @@
     </div>
     <div class="note" id="chgNote">The bridge turns charging off when you connect. Disconnect here restores charging at this limit first; closing the page without Disconnect leaves charging off.</div>
   </div>
+
+  <details id="plog">
+    <summary>Puff log <span id="pl-n" style="color:var(--mut);font-weight:400"></span></summary>
+    <div class="in">
+      <div id="pl-today"></div>
+      <div class="btns">
+        <button class="alt" id="pl-csv">Export CSV</button>
+        <button class="alt" id="pl-json">Export JSON</button>
+        <button class="stop" id="pl-clear">Clear log</button>
+      </div>
+      <div class="note" id="pl-msg" style="margin:0 0 6px"></div>
+      <div id="pl-list"></div>
+      <div class="note">Saved only in this browser on this device (last 200 puffs). Nothing is uploaded; export to keep a copy. Tap a puff to show its curve in the chart.</div>
+    </div>
+  </details>
 
   <details id="tests">
     <summary>Tests &amp; console</summary>
@@ -333,7 +354,10 @@ const COIL = [P('T=GET', /^T=(?:-?[\d.]+[FC]|\?)$/i, 'T'), P('P=GET', /^P=(?:-?[
 const FAST = [P('B=GET', /^B=-?[\d.]+V$/i), P('B=GETI', /^B=-?[\d.]+A$/i), P('U=GETP', /^U=-?[\d.]+W$/i)];
 const SLOW = [P('C=GET%', /^C=\d/), P('T=GET BOARD', /^T=-?[\d.]+[FC]$/i), P('R=GET COLD', /^R=[\d.]+OHM$/i),
               P('X=GET MODE', /^X=\d+$/), P('S=GET PUFFS', /^S=\d+$/), P('S=GET LAST POWER', /^S=[\d.]+W$/i),
-              P('S=GET LAST TIME', /^S=[\d.]+S$/i), P('S=GET LAST PEAK TEMP', /^S=[\d.]+[FC]$/i)];
+              P('S=GET LAST TIME', /^S=[\d.]+S$/i), P('S=GET LAST PEAK TEMP', /^S=[\d.]+[FC]$/i),
+              // Setpoints are tagged (handled in pollTick): T=385.00F / P=36.00W look like board temp / live watts.
+              P('T=GET SP', /^T=-?[\d.]+[FC]$/i, 'TSP'), P('P=GET SP', /^P=-?[\d.]+W$/i, 'PSP')];
+const sp = { T: null, P: null };   // last known setpoints {v,u}
 const ONCE = [P('E=GET PRODUCT', /^E=/), P('U=GET INFO', /^U=A:/i)];
 const FAST_MS = 2000, SLOW_MS = 15000;
 let pollTimer = null, lastSlow = 0, suiteRunning = false, closing = false;
@@ -367,16 +391,19 @@ async function pollTick() {
     const slow = Date.now() - lastSlow >= SLOW_MS;
     if (slow) { set.push(...SLOW); lastSlow = Date.now(); }
     let done = true;
+    const got = {};   // this pass's SLOW replies, so a puff record only uses stats read after the puff
     for (const p of set) {
       if (!rx || closing || modAbsent) { done = false; break; }
       const l = await pollOne(p);
+      if (SLOW.includes(p)) got[p.cmd] = l;
+      if (p.k === 'TSP' || p.k === 'PSP') { const x = l && p.re.test(l) ? coilVal(l) : null; if (x) sp[p.k[0]] = x; }
       if (ONCE.includes(p)) {
         if (l && p.re.test(l)) onceGot[p.cmd] = true;
         else if (!modAbsent) onceTries[p.cmd] = (onceTries[p.cmd] || 0) + 1;
       }
       if (p.k === 'T' && coilVal(l)) { startPuff(); recordCycle({ T: coilVal(l) }); again = true; done = false; break; }
     }
-    if (slow && done && postPuff) { postPuff = false; showPuffSummary(); }
+    if (slow && done && postPuff) { postPuff = false; finishPuff(got); }
   });
   if (again && rx && !closing) soon(0);
 }
@@ -400,7 +427,7 @@ function setAbsent(on) {
   if (on === modAbsent || !rx) return;
   modAbsent = on;
   if (on) {
-    stopPoll(); if (firing) endPuff(false); staleAll();
+    stopPoll(); if (firing) endPuff(false); else if (postPuff) { postPuff = false; finishPuff(null); } staleAll();
     clearInterval(probeTimer); if (!closing) probeTimer = setInterval(probe, PROBE_MS);
     add('-- mod not detected by the bridge (check the cable); polling paused, !status every 5 s', 'err');
   } else {
@@ -427,8 +454,9 @@ function coilVal(l) {   // 'T=224.91F' -> {v:224.91, u:'F'}; 'T=?' or null -> nu
   return m ? { v: parseFloat(m[1]), u: m[2].toUpperCase() } : null;
 }
 function startPuff() {
-  firing = true; tQ = 0; tMiss = 0; postPuff = false;
-  puff = { t0: Date.now(), end: null, pts: [], u: 'F', peak: null, wSum: 0, wN: 0 };
+  if (postPuff) finishPuff(null);   // previous puff's stats never got read: log it from what was seen here
+  firing = true; tQ = 0; tMiss = 0; postPuff = false; selRow = -1; renderLog();
+  puff = { t0: Date.now(), end: null, pts: [], u: 'F', peak: null, wSum: 0, wN: 0, n0: last.puffs, saved: false };
   $('fire').className = 'card show on'; $('f-state').textContent = 'Firing';
   ['f-w', 'f-v', 'f-a', 'f-r'].forEach(id => $(id).textContent = '--');
   $('f-sum').textContent = '';
@@ -440,7 +468,7 @@ function endPuff(readStats) {
   $('fire').className = 'card show'; $('f-state').textContent = 'Last puff';
   showElapsed();
   if (readStats) { postPuff = true; lastSlow = 0; $('f-sum').textContent = 'reading puff stats…'; }
-  else showPuffSummary();
+  else finishPuff(null);
 }
 // One firing-mode cycle (inside the lock). Returns true to schedule the next tick immediately.
 async function fireCycle() {
@@ -464,7 +492,7 @@ function recordCycle(c) {
     puff.u = c.T.u;
     if (puff.peak == null || c.T.v > puff.peak) puff.peak = c.T.v;
     if (puff.pts.length >= MAX_PTS) puff.pts.shift();
-    puff.pts.push({ t, T: c.T.v, W: c.P ? c.P.v : null });
+    puff.pts.push({ t, T: c.T.v, W: c.P ? c.P.v : null, R: c.I && c.V && c.I.v > 0.05 ? c.V.v / c.I.v : null });
     $('f-temp').textContent = c.T.v.toFixed(0) + '°' + c.T.u;
   }
   if (c.P) { $('f-w').textContent = c.P.v.toFixed(1) + ' W'; puff.wSum += c.P.v; puff.wN++; }
@@ -490,8 +518,8 @@ function showPuffSummary() {
   }
 }
 // Inline SVG: coil temp (orange, left axis) and watts (blue, right axis) vs seconds.
-function drawChart() {
-  const svg = $('chart'), pts = puff ? puff.pts : [];
+function drawChart(pts = puff ? puff.pts : []) {
+  const svg = $('chart');
   const W = 340, H = 150, L = 36, R = 304, T0 = 8, B = 128;
   if (!pts.length) { svg.innerHTML = ''; return; }
   const tMax = Math.max(5, pts[pts.length - 1].t);
@@ -515,6 +543,143 @@ function drawChart() {
     txt(L, H - 6, '0 s', '#888', 'start') + txt(R, H - 6, tMax.toFixed(0) + ' s', '#888', 'end');
 }
 
+// ---- puff log: one record per puff, kept only in this browser's localStorage (never sent anywhere) ----
+const PKEY = 'gremlin.puffLog', PMAX = 200, CURVE_PTS = 120;
+let selRow = -1;
+function loadLog() {
+  try { const a = JSON.parse(localStorage.getItem(PKEY) || '[]'); return Array.isArray(a) ? a.filter(r => r && typeof r === 'object' && r.start) : []; }
+  catch (e) { return []; }
+}
+let plog = loadLog();
+function storeLog() {
+  while (plog.length > PMAX) plog.shift();
+  for (let i = 0; i < 4; i++) {
+    try { localStorage.setItem(PKEY, JSON.stringify(plog)); return true; }
+    catch (e) {
+      const quota = e && (e.name === 'QuotaExceededError' || e.code === 22 || e.code === 1014);
+      if (!quota || plog.length <= 1) return false;     // storage unavailable: keep this session's log in memory
+      plog.splice(0, Math.ceil(plog.length / 4));       // full: drop the oldest quarter and retry
+    }
+  }
+  return false;
+}
+const r1 = x => x == null || !isFinite(x) ? null : Math.round(x * 10) / 10;
+// Called once per puff when it ends (after the post-puff SLOW pass if there was one). got = that pass's replies or null.
+function finishPuff(got) {
+  if (!puff || puff.saved) return;
+  puff.saved = true;
+  const g = cmd => {
+    const p = SLOW.find(x => x.cmd === cmd), l = got && got[cmd];
+    if (!l || !p.re.test(l)) return null;
+    const m = l.match(/^[A-Z]=(-?\d+(?:\.\d+)?)([A-Z]*)$/i);
+    return m ? { v: parseFloat(m[1]), u: m[2].toUpperCase() } : null;
+  };
+  const mN = g('S=GET PUFFS'), mS = g('S=GET LAST TIME'), mPk = g('S=GET LAST PEAK TEMP'), mW = g('S=GET LAST POWER');
+  const pts = puff.pts;
+  // One stray numeric T=GET (replies misalign now and then) is not a puff if the mod's counter did not move.
+  if (pts.length < 3 && mN && puff.n0 != null && mN.v <= puff.n0) { showPuffSummary(); return; }
+  // Mod stats count only if the counter moved (or is unknown); otherwise they describe an older puff.
+  const modOk = !!(mS && mW) && !(mN && puff.n0 != null && mN.v <= puff.n0);
+  const thr = puff.u === 'C' ? 8 : 15;   // plateau = samples within ~15 °F of the hottest live reading
+  const rs = pts.filter(p => p.R != null && puff.peak != null && p.T >= puff.peak - thr).map(p => p.R);
+  const n = pts.length, idx = n <= CURVE_PTS ? pts.map((_, i) => i) : Array.from({ length: CURVE_PTS }, (_, i) => Math.round(i * (n - 1) / (CURVE_PTS - 1)));
+  const seen = ((puff.end || Date.now()) - puff.t0) / 1000;
+  const rec = {
+    start: new Date(puff.t0).toISOString(),
+    dur: r1(modOk ? mS.v : seen), src: modOk ? 'mod' : 'panel',
+    peak: r1(modOk && mPk ? mPk.v : puff.peak), unit: modOk && mPk ? mPk.u : puff.u,
+    avgW: r1(modOk ? mW.v : puff.wN ? puff.wSum / puff.wN : null),
+    puffNo: mN ? mN.v : null,
+    maxT: r1(puff.peak), hotOhm: rs.length ? Math.round(rs.reduce((a, b) => a + b, 0) / rs.length * 1000) / 1000 : null,
+    spT: sp.T ? r1(sp.T.v) : null, spTU: sp.T ? sp.T.u : null, spW: sp.P ? r1(sp.P.v) : null,
+    seen: r1(seen), samples: n,
+    curve: idx.map(i => [r1(pts[i].t), r1(pts[i].T), r1(pts[i].W)]),
+  };
+  plog.push(rec);
+  const ok = storeLog();
+  $('f-sum').textContent = recText(rec) + (ok ? ' · logged' : ' · logged for this session only (storage unavailable)');
+  renderLog();
+  return rec;
+}
+const f1 = (x, u) => x == null ? '--' : x.toFixed(1) + u;
+const pad = n => String(n).padStart(2, '0');
+function recText(r) {
+  return (r.src === 'mod' ? (r.puffNo != null ? 'Puff #' + r.puffNo + ': ' : 'Mod: ') : 'Seen here: ~') + f1(r.dur, ' s') +
+    (r.peak != null ? ' · peak ' + r.peak.toFixed(0) + '°' + r.unit : '') + (r.avgW != null ? ' · avg ' + r.avgW.toFixed(1) + ' W' : '') +
+    (r.hotOhm != null ? ' · hot ' + r.hotOhm.toFixed(3) + ' Ω' : '');
+}
+function sameDay(a, b) { return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate(); }
+function when(r) {
+  const d = new Date(r.start), now = new Date(), hm = pad(d.getHours()) + ':' + pad(d.getMinutes());
+  return sameDay(d, now) ? hm : (d.getMonth() + 1) + '/' + d.getDate() + ' ' + hm;
+}
+function renderLog() {
+  $('pl-n').textContent = plog.length ? '(' + plog.length + ')' : '';
+  const now = new Date(), today = plog.filter(r => sameDay(new Date(r.start), now));
+  const secs = today.reduce((a, r) => a + (r.dur || 0), 0);
+  const wr = today.filter(r => r.avgW != null && r.dur);
+  const wd = wr.reduce((a, r) => a + r.dur, 0);
+  $('pl-today').textContent = 'Today: ' + today.length + ' puff' + (today.length === 1 ? '' : 's') + ' · ' + secs.toFixed(1) + ' s' +
+    (wd ? ' · avg ' + (wr.reduce((a, r) => a + r.avgW * r.dur, 0) / wd).toFixed(1) + ' W' : '');
+  const list = $('pl-list'); list.textContent = '';
+  if (!plog.length) { const e = document.createElement('div'); e.className = 'note'; e.textContent = 'No puffs logged yet.'; list.appendChild(e); }
+  for (let i = plog.length - 1; i >= 0; i--) {
+    const r = plog[i], row = document.createElement('div');
+    row.className = 'pr' + (i === selRow ? ' sel' : ''); row.dataset.i = i; row.setAttribute('role', 'button'); row.tabIndex = 0;
+    [when(r), f1(r.dur, ' s'), r.peak == null ? '--' : r.peak.toFixed(0) + '°' + (r.unit || ''), f1(r.avgW, ' W')].forEach(t => {
+      const s = document.createElement('span'); s.textContent = t; row.appendChild(s);
+    });
+    list.appendChild(row);
+  }
+}
+function showLogged(i) {
+  const r = plog[i];
+  if (!r) return;
+  if (firing) { $('pl-msg').textContent = 'Firing now — the chart is live until the puff ends.'; return; }
+  selRow = i; renderLog();
+  $('fire').className = 'card show'; $('f-state').textContent = 'Logged puff · ' + when(r);
+  $('f-el').textContent = f1(r.dur, ' s');
+  $('f-temp').textContent = r.peak == null ? '--' : r.peak.toFixed(0) + '°' + r.unit;
+  $('f-w').textContent = f1(r.avgW, ' W'); $('f-v').textContent = '--'; $('f-a').textContent = '--';
+  $('f-r').textContent = r.hotOhm == null ? '--' : r.hotOhm.toFixed(3) + ' Ω';
+  drawChart((Array.isArray(r.curve) ? r.curve : []).filter(c => Array.isArray(c) && c[1] != null).map(c => ({ t: c[0] || 0, T: c[1], W: c[2] })));
+  $('f-sum').textContent = recText(r) + (r.spT != null || r.spW != null ? ' · set ' + [r.spT != null ? r.spT.toFixed(0) + '°' + r.spTU : '', r.spW != null ? r.spW.toFixed(1) + ' W' : ''].filter(Boolean).join(' / ') : '');
+  if (typeof $('fire').scrollIntoView === 'function') $('fire').scrollIntoView({ block: 'start', behavior: 'smooth' });
+}
+$('pl-list').onclick = e => { const row = e.target.closest('.pr'); if (row) showLogged(parseInt(row.dataset.i, 10)); };
+$('pl-list').onkeydown = e => { const row = e.target.closest('.pr'); if (row && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); showLogged(parseInt(row.dataset.i, 10)); } };
+const CSV_COLS = ['start', 'dur', 'src', 'peak', 'unit', 'avgW', 'puffNo', 'maxT', 'hotOhm', 'spT', 'spTU', 'spW', 'seen', 'samples'];
+const CSV_HEAD = ['start_iso', 'duration_s', 'source', 'peak_temp', 'temp_unit', 'avg_w', 'puff_number', 'max_live_temp', 'hot_ohm', 'setpoint_temp', 'setpoint_unit', 'setpoint_w', 'seen_here_s', 'samples'];
+function csvCell(v) { v = v == null ? '' : String(v); return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; }
+function logCsv() { return [CSV_HEAD.join(','), ...plog.map(r => CSV_COLS.map(k => csvCell(r[k])).join(','))].join('\n') + '\n'; }
+function logJson() { return JSON.stringify({ format: 'gremlin-puff-log', version: 1, exported: new Date().toISOString(), puffs: plog }, null, 1); }
+async function exportLog(kind) {
+  if (!plog.length) { $('pl-msg').textContent = 'Nothing to export yet.'; return; }
+  const d = new Date(), name = 'puff-log-' + d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) + '.' + kind;
+  const text = kind === 'csv' ? logCsv() : logJson();
+  try {
+    // A local blob: URL; nothing leaves the phone unless the user shares it from the save/share sheet.
+    const url = URL.createObjectURL(new Blob([text], { type: kind === 'csv' ? 'text/csv' : 'application/json' }));
+    const a = document.createElement('a'); a.href = url; a.download = name;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
+    $('pl-msg').textContent = 'Exported ' + name + ' (' + plog.length + ' puffs).';
+  } catch (e) {
+    const ok = await copyText(text);
+    $('pl-msg').textContent = ok ? 'Download not available here — copied ' + kind.toUpperCase() + ' to the clipboard instead.' : 'Export failed: ' + e;
+  }
+}
+$('pl-csv').onclick = () => exportLog('csv');
+$('pl-json').onclick = () => exportLog('json');
+$('pl-clear').onclick = () => {
+  if (!plog.length) return;
+  if (!confirm('Delete all ' + plog.length + ' logged puffs from this device? Export first if you want a copy.')) return;
+  plog = []; selRow = -1;
+  try { localStorage.removeItem(PKEY); } catch (e) {}
+  $('pl-msg').textContent = 'Puff log cleared.'; renderLog();
+};
+renderLog();
+
 // ---- connect / disconnect ----
 function setDot() {
   const d = $('dot'); d.className = rx ? (queued > 0 && (suiteRunning || closing) ? 'busy' : 'on') : '';
@@ -523,7 +688,7 @@ function setState(t) { $('state').textContent = t; setDot(); }
 function onDisconnected() {
   stopPoll(); rx = null; closing = false; owed = [];
   clearInterval(probeTimer); probeTimer = null; modAbsent = false; quietInflight = false; showAbsent(false);
-  if (firing) endPuff(false);
+  if (firing) endPuff(false); else if (postPuff) { postPuff = false; finishPuff(null); }
   waiters.forEach(w => { clearTimeout(w.timer); w.resolve(null); }); waiters = [];
   setState('disconnected'); $('conn').textContent = 'Connect'; $('conn').disabled = false;
   staleAll(); add('-- disconnected', 'err');
@@ -623,14 +788,19 @@ async function runSuiteLocked(key) {
   el.style.background = pass ? '#1d4d1d' : '#5a1d1d';
 }
 document.querySelectorAll('[data-suite]').forEach(b => b.onclick = () => runSuite(b.dataset.suite));
-$('copy').onclick = async () => {
-  try { await navigator.clipboard.writeText(all.join('\n')); add('-- copied ' + all.length + ' lines', 'rx'); }
+async function copyText(text) {
+  try { await navigator.clipboard.writeText(text); return true; }
   catch (e) {
-    const t = document.createElement('textarea'); t.value = all.join('\n');
-    document.body.appendChild(t); t.select();
-    const ok = document.execCommand('copy'); t.remove();
-    add(ok ? '-- copied ' + all.length + ' lines' : 'copy failed: ' + e, ok ? 'rx' : 'err');
+    try {
+      const t = document.createElement('textarea'); t.value = text;
+      document.body.appendChild(t); t.select();
+      const ok = document.execCommand('copy'); t.remove(); return !!ok;
+    } catch (e2) { return false; }
   }
+}
+$('copy').onclick = async () => {
+  const ok = await copyText(all.join('\n'));
+  add(ok ? '-- copied ' + all.length + ' lines' : 'copy failed', ok ? 'rx' : 'err');
 };
 $('clear').onclick = () => { $('log').textContent = ''; all.length = 0; $('sum').style.display = 'none'; };
 document.querySelectorAll('[data-cmd]').forEach(b => b.onclick = () => sendManual(b.dataset.cmd));
