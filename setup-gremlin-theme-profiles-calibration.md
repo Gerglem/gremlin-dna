@@ -2,15 +2,18 @@
 
 This is the setup half of my Thelema Solo DNA100C build (**[chip swap guide](chip-swap-thelema-solo-dna100c.md)**). It works on **any DNA color mod** (DNA75C, DNA100C, DNA250C) running Evolv's **international firmware**.
 
-**Low vision?** A High Contrast: Large Text theme is coming — it is not published yet,
-see [`RELEASE-NOTES.md`](RELEASE-NOTES.md).
+**Low vision?** There is a High Contrast: Large Text theme,
+`gremlin_high_contrast_v1.3_theme.ecigtheme` — see
+[`RELEASE-NOTES.md`](RELEASE-NOTES.md#gremlin-high-contrast-large-text). **Want something
+simpler than Gremlin?** Try [Lantern](RELEASE-NOTES.md#lantern). Both load the same way
+as Gremlin (step 5) and use the same profiles and curves.
 
 **Downloads:** https://github.com/Gerglem/gremlin-dna/tree/main/files — current release
-**v2.5**. The `current` files are always the newest release; the `v2.5` files are that
+**v2.9**. The `current` files are always the newest release; the `v2.9` files are that
 exact release and never change. The build number inside the theme is finer-grained than
 the release name — see
 [versions and the build number](RELEASE-NOTES.md#versions-and-the-build-number).
-- `gremlin_current_theme.ecigtheme` (or `gremlin_v2.5_theme.ecigtheme`): the theme on its own
+- `gremlin_current_theme.ecigtheme` (or `gremlin_v2.9_theme.ecigtheme`): the theme on its own
 - ~~`gremlin_current.ecig`~~ — **the combined file was withdrawn 2026-11-07** because it also set your USB charge rate to 3.0 A, overriding a slower one you may have chosen on purpose. Load the theme, the profiles and the curves below instead; it is a few more clicks and it leaves your battery settings alone. See the note in `README.md`
 - `materials/dtv5xl-tcr200.csv` and `materials/questcup-tcr125.csv`: the TCR material curves
 - `profiles/DTv5XL-Profile.ecigprofile`, `QuestCup.ecigprofile`, `DTv5XL-Clean.ecigprofile`, `QuestCup-Clean.ecigprofile`
@@ -94,14 +97,16 @@ Vapor comes off much lower than people expect — terpenes and THC volatilize be
 **Theme** tab → load `gremlin-theme.ecigtheme` → **Upload Settings to Device.**
 
 ### What Gremlin does
-- **Seven looks:** Classic, Retro, Synth, Toxic, Ice, Desert and Terminal, picked under **MENU → THEMES** (turn on one at a time; all off is Classic). They recolor the home screen, the lock screen, and each menu's title.
-- **Home screen:** battery bar (green → red as it drains), profile, big **live temperature**, set temperature, watts, **session length**, cold and live resistance, ohm-lock toggle, and a status line that shows the chip's "Firing," "No Atomizer," and other warnings. A **profile-colored accent line** picks up the active theme.
-- **While firing:** an orange **FIRING** box.
-- **Low battery:** a red **LOW BATTERY** banner below 15%.
+- **One look, built to be read outdoors:** text is white, and color only marks things — red for a warning, orange for firing or heat, yellow for charging. (The switchable color schemes of v2.5 and earlier are gone.)
+- **Home screen:** battery gauge and percentage, profile, one big temperature, watts, **session length**, cold and live resistance, ohm-lock toggle, and a status line that shows the chip's "Firing," "No Atomizer," and other warnings. The big temperature is the **setpoint** (`SET`) at idle, the **cup temperature** (`CUP`) while firing, and the **board temperature** (`BOARD`) on a cleaning profile.
+- **While firing:** the cup temperature inside an orange frame; the ohm-lock row hides and the session time goes gray.
+- **Battery:** the gauge outline turns red below 15% and yellow while charging.
+- **Charging:** a bolt next to the battery, and the board temperature in the top right corner. The bolt turns orange if the board goes above 140°F.
+- **Puff chart:** **MENU → INFO → Last** shows your last puff — temperature and power over time, its length, peak temperature and power. `<` and `>` step through earlier puffs.
 - **Edit in place:** use **up/down** to move between editable items (profile, set temp, watts, session time, ohm lock, brightness, menus). **Select** edits the highlighted item. Read-only values are skipped.
 - **New coil:** swap a heater with the ohm lock off and the mod asks **NEW COIL?**. Accepting stores the new cold resistance but does **not** lock it, so the screen also carries a **LOCK?** toggle. **Answer the prompt first** — YES for a new heater, NO to keep the one you had. The **LOCK?** row only appears once the mod has a resistance stored, so on a brand-new setup it won't be there until you answer. That is deliberate: the lock holds the stored resistance, and before you answer there is nothing to hold. If the screen closes when you answer, lock it from **MENU → PROFILE** instead.
 - **Fire:** fires from the home screen. On menu pages, it's a **back button**.
-- **Menus:** Profile, Preheat, Display, Lock, Info, Clock, and a one-click **Stealth** toggle.
+- **Menus:** Profile, Preheat, Display, Lock, Info (with the theme version and the puff chart), Clock, and a one-click **Stealth** toggle.
 - **Lock screen:** clock, date, a gremlin, and battery.
 - Font is Evolv's own Built SemiBold, on black.
 

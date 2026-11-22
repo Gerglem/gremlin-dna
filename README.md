@@ -1,13 +1,17 @@
 # Gremlin — custom themes for Evolv DNA color mods
 
-Two themes for **Evolv DNA75C / DNA100C / DNA250C** chips, plus Divine Tribe
+Three themes for **Evolv DNA75C / DNA100C / DNA250C** chips, plus Divine Tribe
 profiles and swab-calibrated TCR curves for the **V5 XL** and **Lightning Quest**
 cups. Free, and the files here are the ones I run.
 
 | Theme | For | Guide |
 |---|---|---|
-| **Gremlin: Color Themes** | Live temperature, home-screen editing, battery bar, six switchable color schemes | [setup and calibration](setup-gremlin-theme-profiles-calibration.md) |
-| **Gremlin High Contrast: Large Text** | Built from scratch for people who have trouble reading a mod screen | **not published yet** - see [`RELEASE-NOTES.md`](RELEASE-NOTES.md) |
+| **Gremlin** | Everything visible and tunable: live temperature, home-screen editing, battery gauge, puff chart, board temperature while charging. White text, with color only as markers | [setup and calibration](setup-gremlin-theme-profiles-calibration.md) |
+| **Lantern** | The in-between: one home screen that answers what the mod will do, whether anything is wrong, and what is happening during a puff. Comes in four accent colors | [`RELEASE-NOTES.md`](RELEASE-NOTES.md#lantern) |
+| **Gremlin High Contrast: Large Text** | Built from scratch for people who have trouble reading a mod screen | [`RELEASE-NOTES.md`](RELEASE-NOTES.md#gremlin-high-contrast-large-text) |
+
+All three load the same way and use the same profiles and TCR curves - see
+[Installing](#installing).
 
 Swapping a DNA100C into a Lost Vape Thelema Solo is a separate guide:
 **[chip swap](chip-swap-thelema-solo-dna100c.md)**.
@@ -21,14 +25,14 @@ Swapping a DNA100C into a Lost Vape Thelema Solo is a separate guide:
 
 ## Downloads
 
-Everything is in **[`files/`](files/)**. The current release is **v2.5**.
+Everything is in **[`files/`](files/)**. The current Gremlin release is **v2.9**.
 
-**If you just want the thing, take a `current` file.** It is always the newest
+**If you just want Gremlin, take the `current` file.** It is always the newest
 release, so a link to it keeps working.
 
 | File | What it does |
 |---|---|
-| [`gremlin_current_theme.ecigtheme`](files/gremlin_current_theme.ecigtheme) | The theme only. Keeps your profiles and settings. |
+| [`gremlin_current_theme.ecigtheme`](files/gremlin_current_theme.ecigtheme) | The Gremlin theme only. Keeps your profiles and settings. |
 | [`files/profiles/`](files/profiles/) | The four profiles individually: V5 XL, Quest, and a burn-off for each |
 | [`files/materials/`](files/materials/) | TCR curves — `dtv5xl-tcr200.csv` and `questcup-tcr125.csv` |
 
@@ -38,7 +42,16 @@ changes once it is published:
 
 | File | |
 |---|---|
-| [`gremlin_v2.5_theme.ecigtheme`](files/gremlin_v2.5_theme.ecigtheme) | theme only, v2.5 |
+| [`gremlin_v2.9_theme.ecigtheme`](files/gremlin_v2.9_theme.ecigtheme) | Gremlin, theme only, v2.9 |
+| [`gremlin_v2.5_theme.ecigtheme`](files/gremlin_v2.5_theme.ecigtheme) | Gremlin, theme only, v2.5 — the previous release, with the switchable color schemes |
+| [`gremlin_high_contrast_v1.3_theme.ecigtheme`](files/gremlin_high_contrast_v1.3_theme.ecigtheme) | Gremlin High Contrast: Large Text, theme only, v1.3 |
+| [`lantern_v1.6_theme.ecigtheme`](files/lantern_v1.6_theme.ecigtheme) | Lantern, theme only, v1.6 — white accent |
+| [`lantern-silver_v1.3_theme.ecigtheme`](files/lantern-silver_v1.3_theme.ecigtheme) | Lantern Silver, v1.3 — the same theme with a silver accent |
+| [`lantern-azure_v1.0_theme.ecigtheme`](files/lantern-azure_v1.0_theme.ecigtheme) | Lantern Azure, v1.0 — the same theme with a blue accent |
+| [`lantern-jade_v1.0_theme.ecigtheme`](files/lantern-jade_v1.0_theme.ecigtheme) | Lantern Jade, v1.0 — the same theme with a green accent |
+
+The Lantern files are one theme in four colors: pick the one you like. Only the
+selection bar, the thin rules and the charging mark change color.
 
 One older name, [`gremlin-theme.ecigtheme`](files/gremlin-theme.ecigtheme), is still
 here and still tracks the current release. Forum posts link straight at it, so it is
@@ -67,29 +80,35 @@ not going away — but new links should use `current` or a version.
 
 > **The `current` files are copies, not links, and that is on purpose.** GitHub cannot
 > serve a git symlink as a usable raw download, so `current` has to be a real copy of
-> the newest versioned file — right now it is byte-for-byte the same as `v2.5`. These
+> the newest versioned file — right now it is byte-for-byte the same as `v2.9`. These
 > files are under 50 KB each. The duplication is cheaper than breaking every link that
 > is already out in the wild, so please don't "fix" it.
 
 ### Which version do I have?
 
-The release is called **v2.5**. Inside the theme there is a third number — the build,
-as in `v2.5.07`. It is not part of what the release is called, and you do not need it
+The release is called **v2.9**. Inside the theme there is a third number — the build,
+as in `v2.9.00`. It is not part of what the release is called, and you do not need it
 unless you are reporting a bug or comparing two builds. Two places will tell you:
 
 - **In EScribe** — load the file and read the theme's description: the **Theme** tab for
-  an `.ecigtheme`, **Mod → Theme** for an `.ecig`. It starts with
-  `Gremlin - Color Themes v2.5.07` — release *and* build. This works for every build ever
-  shipped, including files you downloaded before the filenames carried versions.
+  an `.ecigtheme`, **Mod → Theme** for an `.ecig`. It starts with `Gremlin v2.9.00` —
+  release *and* build. Older releases start with `Gremlin - Color Themes`, as in
+  `Gremlin - Color Themes v2.5.07`. This works for every build ever shipped, including
+  files you downloaded before the filenames carried versions.
 - **On the mod** — from build **v2.5.09 onward** the INFO screen carries a `Theme` row
   showing the full version, build included, so you can check a mod you did not set up
-  yourself. **Build v2.5.07 and earlier do not have that row**, so for the current
-  release use EScribe.
+  yourself. v2.9 has it. **Build v2.5.07 and earlier do not have that row**, so for the
+  v2.5 release use EScribe.
+
+Lantern works the same way: its description starts with `Lantern v1.6.00` (or
+`Lantern Silver v1.3.00`, and so on), and its INFO screen has the same `Theme` row.
+High Contrast has no INFO screen, so read its description in EScribe; it starts with
+`Gremlin High Contrast - Large Text v1.3.02`.
 
 The two always agree: the INFO row and the theme description are the same string from
 the same build.
 
-**The filename only ever carries the release**, `v2.5`, never the build — and `current`
+**The filename only ever carries the release**, `v2.9`, never the build — and `current`
 and the two older names carry no version at all. If you need to know the build, read it
 out of the file or off the mod.
 
@@ -110,8 +129,8 @@ Both paths go through EScribe over USB. **Back up what you have first:
    go further; if it does not, try a different cable, since plenty of USB-C cables are
    charge-only.
 2. Pick one:
-   - **Theme only** (keeps your profiles): **Theme** tab, load the `.ecigtheme`, then
-     **Upload Settings to Device**.
+   - **Theme only** (keeps your profiles): **Theme** tab, load the `.ecigtheme` —
+     Gremlin, Lantern or High Contrast — then **Upload Settings to Device**.
    - **A single profile**: **General** tab, pick an empty profile slot, **Load Profile**,
      choose the `.ecigprofile`, then **Upload Settings to Device**. The profile carries
      its own TCR curve, so you do not need to import the `.csv` separately.
