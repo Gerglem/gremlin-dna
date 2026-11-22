@@ -78,8 +78,10 @@ deleted and nothing is renamed, so every link that ever worked keeps working.
 ## Gremlin — current release v2.9
 
 Shipped as `gremlin_v2.9_theme.ecigtheme`, and as the `current` and version-less copies
-of it. The build inside these files is **v2.9.00**. The previous release,
+of it. The build inside these files is **v2.9.01**. The previous release,
 `gremlin_v2.5_theme.ecigtheme`, stays exactly where it was.
+
+**v2.9.01:** on the NEW COIL? screen, the red bar that flags a new coil past its replace threshold moved 2 pixels right, because the screen's two leftmost pixel columns do not show on the DNA 100C; NEW and OLD moved with it. Nothing else changed.
 
 **The color schemes are gone.** Gremlin is function over form, so v2.9 has one look:
 **text is white, and color only marks things** — red for a warning, orange for firing or
