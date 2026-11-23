@@ -38,7 +38,10 @@ The versioned name carries the **release**, `v2.9` — never the build.
 
 High Contrast and Lantern ship under their versioned names only, on their own version
 tracks: `gremlin_high_contrast_vX.Y_theme.ecigtheme`, `lantern_vX.Y_theme.ecigtheme`, and
-`lantern-<accent>_vX.Y_theme.ecigtheme` for each accent color.
+`lantern-<edition>_vX.Y_theme.ecigtheme` for each color edition. **The editions share Lantern's
+version** (from v1.6.02): every Lantern build ships all four, named `Lantern vX.Y.ZZ - Jade Edition` and so on.
+The older per-color files (`lantern-silver_v1.3`, `lantern-azure_v1.0`, `lantern-jade_v1.0`) stay published
+so existing links keep working.
 
 `current` is a copy rather than a symlink because GitHub cannot serve a git symlink as
 a usable raw download. The files are under 50 KB, so the duplication is not worth
@@ -145,11 +148,14 @@ The entries below are **builds** — the history inside release v2.5.
 
 ## Lantern
 
-**First public release: Lantern v1.6**, now build **v1.6.01**, and three accent colors of it:
-Lantern Silver **v1.3** (build v1.3.01), Lantern Azure **v1.0** and Lantern Jade **v1.0**
-(builds v1.0.01).
+**Lantern v1.6**, now build **v1.6.02**, in four color editions: Lantern, and the Silver, Azure and
+Jade Editions. All four carry the same version.
 
-**Builds v1.6.01 / v1.3.01 / v1.0.01:** the description in EScribe states chip support accurately
+**v1.6.02:** one version for every edition. The color versions are renamed **Lantern v1.6.02 - Silver
+Edition**, **- Azure Edition** and **- Jade Edition** (they were Lantern Silver v1.3, Lantern Azure v1.0 and
+Lantern Jade v1.0), and ship as `lantern-<edition>_v1.6_theme.ecigtheme`. Screens unchanged.
+
+**v1.6.01** (and Silver v1.3.01, Azure/Jade v1.0.01): the description in EScribe states chip support accurately
 (tested on a DNA100C; expected on the DNA75C and DNA250C, not yet tested; not for the DNA60C, DNA80C
 or non-color chips), and the INFO screen shows the new build. Nothing else changed.
 
@@ -170,10 +176,10 @@ places you can press.
 
 | File | Accent |
 |---|---|
-| `lantern_v1.6_theme.ecigtheme` | white selection bar, gray rules |
-| `lantern-silver_v1.3_theme.ecigtheme` | silver, plus a silver scale band on the lock screen |
-| `lantern-azure_v1.0_theme.ecigtheme` | blue |
-| `lantern-jade_v1.0_theme.ecigtheme` | green |
+| `lantern_v1.6_theme.ecigtheme` | Lantern: white selection bar, gray rules |
+| `lantern-silver_v1.6_theme.ecigtheme` | Silver Edition: silver, plus a silver scale band on the lock screen |
+| `lantern-azure_v1.6_theme.ecigtheme` | Azure Edition: blue |
+| `lantern-jade_v1.6_theme.ecigtheme` | Jade Edition: green |
 
 The four are the same screens. Only the selection bar, the thin rules and the charging
 bolt change color, so pick by taste.

@@ -21,7 +21,7 @@ in about five minutes, and you can switch back whenever you like.
 | Preview | Theme | What it is like | Download |
 |---|---|---|---|
 | <img src="images/preview/gremlin-idle.png" width="96" alt="Gremlin home screen preview"> | **Gremlin** v2.9 | Function over form. Everything on one screen: temperature, watts, session time, resistance, battery, and a chart of your last puff. White text, with color only as markers. | [gremlin_current_theme.ecigtheme](files/gremlin_current_theme.ecigtheme) |
-| <img src="images/preview/lantern-idle.png" width="96" alt="Lantern home screen preview"> | **Lantern** v1.6 | Form slightly over function. A calm screen: one big number, what is wrong (if anything), and what is happening during a puff. Comes in four accent colors. | [Lantern](files/lantern_v1.6_theme.ecigtheme) · [Silver](files/lantern-silver_v1.3_theme.ecigtheme) · [Azure](files/lantern-azure_v1.0_theme.ecigtheme) · [Jade](files/lantern-jade_v1.0_theme.ecigtheme) |
+| <img src="images/preview/lantern-idle.png" width="96" alt="Lantern home screen preview"> | **Lantern** v1.6 | Form slightly over function. A calm screen: one big number, what is wrong (if anything), and what is happening during a puff. Comes in four accent colors. | [Lantern](files/lantern_v1.6_theme.ecigtheme) · [Silver](files/lantern-silver_v1.6_theme.ecigtheme) · [Azure](files/lantern-azure_v1.6_theme.ecigtheme) · [Jade](files/lantern-jade_v1.6_theme.ecigtheme) |
 | <img src="images/preview/high-contrast-idle.png" width="96" alt="High Contrast home screen preview"> | **High Contrast: Large Text** v1.3 | Simple. Very large yellow and white digits on black, and only what you need on each screen. Made for people who have trouble reading a mod screen. | [gremlin_high_contrast_v1.3_theme.ecigtheme](files/gremlin_high_contrast_v1.3_theme.ecigtheme) |
 
 *Previews are renders, not photos. Each theme's guide has a gallery of every screen.*
@@ -153,9 +153,9 @@ changes once it is published:
 | [`gremlin_v2.5_theme.ecigtheme`](files/gremlin_v2.5_theme.ecigtheme) | Gremlin, theme only, v2.5 — the previous release, with the switchable color schemes |
 | [`gremlin_high_contrast_v1.3_theme.ecigtheme`](files/gremlin_high_contrast_v1.3_theme.ecigtheme) | Gremlin High Contrast: Large Text, theme only, v1.3 |
 | [`lantern_v1.6_theme.ecigtheme`](files/lantern_v1.6_theme.ecigtheme) | Lantern, theme only, v1.6 — white accent |
-| [`lantern-silver_v1.3_theme.ecigtheme`](files/lantern-silver_v1.3_theme.ecigtheme) | Lantern Silver, v1.3 — the same theme with a silver accent |
-| [`lantern-azure_v1.0_theme.ecigtheme`](files/lantern-azure_v1.0_theme.ecigtheme) | Lantern Azure, v1.0 — the same theme with a blue accent |
-| [`lantern-jade_v1.0_theme.ecigtheme`](files/lantern-jade_v1.0_theme.ecigtheme) | Lantern Jade, v1.0 — the same theme with a green accent |
+| [`lantern-silver_v1.6_theme.ecigtheme`](files/lantern-silver_v1.6_theme.ecigtheme) | Lantern - Silver Edition, v1.6 — the same theme with a silver accent |
+| [`lantern-azure_v1.6_theme.ecigtheme`](files/lantern-azure_v1.6_theme.ecigtheme) | Lantern - Azure Edition, v1.6 — the same theme with a blue accent |
+| [`lantern-jade_v1.6_theme.ecigtheme`](files/lantern-jade_v1.6_theme.ecigtheme) | Lantern - Jade Edition, v1.6 — the same theme with a green accent |
 
 The Lantern files are one theme in four colors: pick the one you like. Only the
 selection bar, the thin rules and the charging mark change color.
@@ -207,10 +207,11 @@ unless you are reporting a bug or comparing two builds. Two places will tell you
   yourself. v2.9 has it. **Build v2.5.07 and earlier do not have that row**, so for the
   v2.5 release use EScribe.
 
-Lantern works the same way: its description starts with `Lantern v1.6.00` (or
-`Lantern Silver v1.3.00`, and so on), and its INFO screen has the same `Theme` row.
+Lantern works the same way: its description starts with `Lantern v1.6.02` (or
+`Lantern v1.6.02 - Jade Edition`, and so on), and its INFO screen has the same `Theme` row.
+Every edition carries the same Lantern version.
 High Contrast has no INFO screen, so read its description in EScribe; it starts with
-`Gremlin High Contrast - Large Text v1.3.02`.
+`Gremlin High Contrast - Large Text v1.3.03`.
 
 The two always agree: the INFO row and the theme description are the same string from
 the same build.

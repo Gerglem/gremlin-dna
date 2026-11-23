@@ -33,9 +33,9 @@ lines and the charging bolt change color. Pick the one you like.
 | Accent | File |
 |---|---|
 | Lantern (white) | [`lantern_v1.6_theme.ecigtheme`](../files/lantern_v1.6_theme.ecigtheme) |
-| Silver | [`lantern-silver_v1.3_theme.ecigtheme`](../files/lantern-silver_v1.3_theme.ecigtheme) (also adds a silver scale pattern to the lock screen) |
-| Azure (blue) | [`lantern-azure_v1.0_theme.ecigtheme`](../files/lantern-azure_v1.0_theme.ecigtheme) |
-| Jade (green) | [`lantern-jade_v1.0_theme.ecigtheme`](../files/lantern-jade_v1.0_theme.ecigtheme) |
+| Silver | [`lantern-silver_v1.6_theme.ecigtheme`](../files/lantern-silver_v1.6_theme.ecigtheme) (also adds a silver scale pattern to the lock screen) |
+| Azure (blue) | [`lantern-azure_v1.6_theme.ecigtheme`](../files/lantern-azure_v1.6_theme.ecigtheme) |
+| Jade (green) | [`lantern-jade_v1.6_theme.ecigtheme`](../files/lantern-jade_v1.6_theme.ecigtheme) |
 
 To change accent, install a different file. See the [install guide](install.md).
 
@@ -184,7 +184,7 @@ Click the fire button **five times quickly** (or the number set in **LOCK → Cl
 
 <p><img src="../images/preview/lantern-lock.png" width="160" alt="Lock screen (preview render)"> <img src="../images/preview/lantern-silver-lock.png" width="160" alt="Silver lock screen (preview render)"></p>
 
-*Preview renders: the lock screen (left) and Lantern Silver's lock screen with its scale pattern (right).*
+*Preview renders: the lock screen (left) and the Silver Edition's lock screen with its scale pattern (right).*
 
 **Lock screen:** the clock, the date, `LOCKED` / `FIRE x5` / `TO UNLOCK`, and the battery
 gauge. Click Fire five times quickly to unlock.

@@ -45,9 +45,9 @@ Which file?
 |---|---|
 | Gremlin | `gremlin_current_theme.ecigtheme` (always the newest Gremlin) |
 | Lantern | `lantern_v1.6_theme.ecigtheme` |
-| Lantern Silver | `lantern-silver_v1.3_theme.ecigtheme` |
-| Lantern Azure | `lantern-azure_v1.0_theme.ecigtheme` |
-| Lantern Jade | `lantern-jade_v1.0_theme.ecigtheme` |
+| Lantern - Silver Edition | `lantern-silver_v1.6_theme.ecigtheme` |
+| Lantern - Azure Edition | `lantern-azure_v1.6_theme.ecigtheme` |
+| Lantern - Jade Edition | `lantern-jade_v1.6_theme.ecigtheme` |
 | High Contrast: Large Text | `gremlin_high_contrast_v1.3_theme.ecigtheme` |
 
 The four Lantern files are the same theme in different accent colors. Pick the one you
