@@ -1,12 +1,16 @@
 # Setup guide: Gremlin theme, Divine Tribe profiles, and calibration
 
-This is the setup half of my Thelema Solo DNA100C build (**[chip swap guide](chip-swap-thelema-solo-dna100c.md)**). It works on **any DNA color mod** (DNA75C, DNA100C, DNA250C) running Evolv's **international firmware**.
+This is the setup half of my Thelema Solo DNA100C build (**[chip swap guide](chip-swap-thelema-solo-dna100c.md)**). It is tested on a **DNA 100C** running Evolv's **international firmware**; for other chips see [Which chips](README.md#which-chips).
+
+**Only want a theme?** You do not need this whole guide. The
+[install guide](guides/install.md) covers installing any of the three themes in a few
+minutes.
 
 **Low vision?** There is a High Contrast: Large Text theme,
-`gremlin_high_contrast_v1.3_theme.ecigtheme` — see
-[`RELEASE-NOTES.md`](RELEASE-NOTES.md#gremlin-high-contrast-large-text). **Want something
-simpler than Gremlin?** Try [Lantern](RELEASE-NOTES.md#lantern). Both load the same way
-as Gremlin (step 5) and use the same profiles and curves.
+`gremlin_high_contrast_v1.3_theme.ecigtheme` — see the
+[High Contrast guide](guides/high-contrast.md). **Want something simpler than Gremlin?**
+Try [Lantern](guides/lantern.md). Both load the same way as Gremlin (step 5) and use the
+same profiles and curves.
 
 **Downloads:** https://github.com/Gerglem/gremlin-dna/tree/main/files — current release
 **v2.9**. The `current` files are always the newest release; the `v2.9` files are that
@@ -94,21 +98,16 @@ Vapor comes off much lower than people expect — terpenes and THC volatilize be
 
 ## 5. Load the theme
 
-**Theme** tab → load `gremlin-theme.ecigtheme` → **Upload Settings to Device.**
+**Theme** tab → **Load Theme...** → `gremlin_current_theme.ecigtheme` → **Upload Settings to Device.**
+
+The [install guide](guides/install.md) has the same steps in more detail, how to switch
+back, and fixes for common problems.
 
 ### What Gremlin does
-- **One look, built to be read outdoors:** text is white, and color only marks things — red for a warning, orange for firing or heat, yellow for charging. (The switchable color schemes of v2.5 and earlier are gone.)
-- **Home screen:** battery gauge and percentage, profile, one big temperature, watts, **session length**, cold and live resistance, ohm-lock toggle, and a status line that shows the chip's "Firing," "No Atomizer," and other warnings. The big temperature is the **setpoint** (`SET`) at idle, the **cup temperature** (`CUP`) while firing, and the **board temperature** (`BOARD`) on a cleaning profile.
-- **While firing:** the cup temperature inside an orange frame; the ohm-lock row hides and the session time goes gray.
-- **Battery:** the gauge outline turns red below 15% and yellow while charging.
-- **Charging:** a bolt next to the battery, and the board temperature in the top right corner. The bolt turns orange if the board goes above 140°F.
-- **Puff chart:** **MENU → INFO → Last** shows your last puff — temperature and power over time, its length, peak temperature and power. `<` and `>` step through earlier puffs.
-- **Edit in place:** use **up/down** to move between editable items (profile, set temp, watts, session time, ohm lock, brightness, menus). **Select** edits the highlighted item. Read-only values are skipped.
-- **New coil:** swap a heater with the ohm lock off and the mod asks **NEW COIL?**. Accepting stores the new cold resistance but does **not** lock it, so the screen also carries a **LOCK?** toggle. **Answer the prompt first** — YES for a new heater, NO to keep the one you had. The **LOCK?** row only appears once the mod has a resistance stored, so on a brand-new setup it won't be there until you answer. That is deliberate: the lock holds the stored resistance, and before you answer there is nothing to hold. If the screen closes when you answer, lock it from **MENU → PROFILE** instead.
-- **Fire:** fires from the home screen. On menu pages, it's a **back button**.
-- **Menus:** Profile, Preheat, Display, Lock, Info (with the theme version and the puff chart), Clock, and a one-click **Stealth** toggle.
-- **Lock screen:** clock, date, a gremlin, and battery.
-- Font is Evolv's own Built SemiBold, on black.
+
+The [Gremlin guide](guides/gremlin.md) explains every part of the screen, what the colors
+mean, and how to use the buttons. In short: text is white, and color only marks things —
+red for a warning, orange for firing or heat, yellow for charging.
 
 ### Known limits (firmware, not fixable in a theme)
 - The **first fire after power-on** may show a blank status line. That's the chip clearing its own message.
