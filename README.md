@@ -4,6 +4,9 @@ Three themes for **Evolv DNA75C / DNA100C / DNA250C** chips, plus Divine Tribe
 profiles and swab-calibrated TCR curves for the **V5 XL** and **Lightning Quest**
 cups. Free, and the files here are the ones I run.
 
+> **Use at your own risk.** Everything here is provided as is, with no warranty, and is not
+> affiliated with Evolv. Read the [disclaimer](DISCLAIMER.md) before you install or fire anything.
+
 | Theme | For | Guide |
 |---|---|---|
 | **Gremlin** | Everything visible and tunable: live temperature, home-screen editing, battery gauge, puff chart, board temperature while charging. White text, with color only as markers | [setup and calibration](setup-gremlin-theme-profiles-calibration.md) |
@@ -164,4 +167,4 @@ Issues and questions are welcome — open an issue here, or reply in the
 r/DivineTribeVaporizers thread. Telling me your chip, firmware edition and cup is
 most of the diagnosis.
 
-Soldering lithium battery leads is at your own risk.
+Soldering lithium battery leads is at your own risk. See the full [disclaimer](DISCLAIMER.md).
