@@ -34,11 +34,15 @@ Want every number on screen? Take **Gremlin**. Want a calm, simple screen? Take
 | Theme | DNA 100C | DNA 250C | DNA 75C | DNA 60C, DNA 80C, mono or LED-only |
 |---|---|---|---|---|
 | Gremlin, Lantern | Tested | Expected, not yet tested | Expected, not yet tested | Will not work |
-| High Contrast | Tested | Expected, not yet tested | Does not fit | Will not work |
+| High Contrast | Tested | Expected, not yet tested | Expected, not yet tested | Will not work |
 
 - **Tested on** a DNA 100C with Evolv's international firmware SP55.1. The 250C and 75C
   have the same 160×80 color screen and buttons, and EScribe builds the theme for both.
-- **Expected, not yet tested** means not yet tested on hardware.
+- **Expected, not yet tested** means exactly that: EScribe builds the theme for that chip, but
+  nobody has run it on one yet. We have only tested on a DNA 100C.
+- **Have a DNA 75C or DNA 250C? Help us test.** Install a theme, try each screen, and
+  [open an issue](https://github.com/Gerglem/gremlin-dna/issues) saying your chip, firmware and what worked or didn't.
+  Photos of the screen help most.
 - **The DNA 100C is no longer in production.** Evolv points to the DNA 75C and DNA 250C
   as its alternatives (the 250C needs more than one battery).
 - **International (INT) firmware** is needed for Session Mode.
@@ -46,7 +50,6 @@ Want every number on screen? Take **Gremlin**. Want a calm, simple screen? Take
   theme uses. Nothing is written to the mod in that case.
 - **Will not work:** DNA 60C (smaller 160×40 screen, two buttons), DNA 80C (no theme
   designer), and mono or LED-only DNA chips.
-- **High Contrast does not fit on the DNA 75C:** EScribe reports it out of space.
 
 ## Install in 5 steps
 
@@ -75,7 +78,7 @@ What changed in each release: [`RELEASE-NOTES.md`](RELEASE-NOTES.md).
 
 ## Requirements
 
-- A **DNA color chip** — DNA 100C (tested), DNA 250C or DNA 75C (High Contrast does not fit the 75C). Not for non-color DNA chips; not for DNA 60C. See [Which chips](#which-chips).
+- A **DNA color chip** — DNA 100C (tested), DNA 250C or DNA 75C (expected, not yet tested). Not for non-color DNA chips; not for DNA 60C. See [Which chips](#which-chips).
 - **Evolv's international firmware**, if you want Session Mode (DNA autofire). The US firmware does not have it.
 - **EScribe**, Evolv's free software: <https://www.evolvapor.com/escribe>
 - Up, select and down buttons plus fire.

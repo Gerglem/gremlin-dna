@@ -78,8 +78,13 @@ deleted and nothing is renamed, so every link that ever worked keeps working.
 ## Gremlin — current release v2.9
 
 Shipped as `gremlin_v2.9_theme.ecigtheme`, and as the `current` and version-less copies
-of it. The build inside these files is **v2.9.01**. The previous release,
+of it. The build inside these files is **v2.9.02**. The previous release,
 `gremlin_v2.5_theme.ecigtheme`, stays exactly where it was.
+
+**v2.9.02:** the theme's description in EScribe now states chip support accurately: tested on a
+DNA100C; expected to work on the DNA75C and DNA250C but not yet tested on them (testers welcome);
+not for the DNA60C, DNA80C or non-color chips. The INFO screen's `Theme` row reads v2.9.02.
+Nothing else changed.
 
 **v2.9.01:** on the NEW COIL? screen, the red bar that flags a new coil past its replace threshold moved 2 pixels right, because the screen's two leftmost pixel columns do not show on the DNA 100C; NEW and OLD moved with it. Nothing else changed.
 
@@ -140,9 +145,13 @@ The entries below are **builds** — the history inside release v2.5.
 
 ## Lantern
 
-**First public release: Lantern v1.6**, build **v1.6.00**, and three accent colors of it:
-Lantern Silver **v1.3** (build v1.3.00), Lantern Azure **v1.0** and Lantern Jade **v1.0**
-(builds v1.0.00).
+**First public release: Lantern v1.6**, now build **v1.6.01**, and three accent colors of it:
+Lantern Silver **v1.3** (build v1.3.01), Lantern Azure **v1.0** and Lantern Jade **v1.0**
+(builds v1.0.01).
+
+**Builds v1.6.01 / v1.3.01 / v1.0.01:** the description in EScribe states chip support accurately
+(tested on a DNA100C; expected on the DNA75C and DNA250C, not yet tested; not for the DNA60C, DNA80C
+or non-color chips), and the INFO screen shows the new build. Nothing else changed.
 
 Lantern sits between the other two. A mod screen is glanced at, one-handed, often in poor
 light, and it has to answer three things: what will this do, is anything wrong, and what is
@@ -171,8 +180,13 @@ bolt change color, so pick by taste.
 
 ## Gremlin High Contrast: Large Text
 
-**First public release: v1.3**, build **v1.3.02**, shipped as
+**First public release: v1.3**, now build **v1.3.03**, shipped as
 `gremlin_high_contrast_v1.3_theme.ecigtheme`.
+
+**v1.3.03:** now fits the DNA 75C. The large-number font stored letters and symbols the screen never
+draws; those are blanked, which frees enough space for the 75C. Every screen looks the same. The
+description in EScribe states chip support accurately (tested on a DNA100C; expected on the DNA75C and
+DNA250C, not yet tested; testers welcome).
 
 Built from scratch for people who have trouble reading a mod screen: large text, white and
 yellow on black, and only what is needed on each screen.

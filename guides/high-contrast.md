@@ -4,9 +4,8 @@ High Contrast is the simple one, made for people who have trouble reading a mod 
 Very large digits, white and yellow on black, and only what you need on each screen.
 Everything else stays at its normal setting and is changed in EScribe.
 
-**Works on:** tested on the Evolv DNA 100C. Expected to work on the DNA 250C. **Does not
-fit on the DNA 75C** (EScribe reports it out of space). Not for DNA 60C, DNA 80C, or mono
-or LED-only DNA chips. [Details](../README.md#which-chips).
+**Works on:** tested on the Evolv DNA 100C. Expected to work, not yet tested: DNA 250C and
+DNA 75C. Not for DNA 60C, DNA 80C, or mono or LED-only DNA chips. [Details](../README.md#which-chips).
 
 Not installed yet? See the [install guide](install.md).
 

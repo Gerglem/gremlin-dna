@@ -20,7 +20,7 @@ profiles, temperatures, watts and resistance stay as they are.
 ## What you need
 
 - A mod with an **Evolv DNA color chip**. Tested on the DNA 100C. Expected to work, not
-  yet tested: DNA 250C and DNA 75C (High Contrast does not fit on the DNA 75C). Not for
+  yet tested: DNA 250C and DNA 75C. Not for
   DNA 60C, DNA 80C, or mono or LED-only chips. See
   [Which chips](../README.md#which-chips).
 - Evolv's **international firmware** on the chip. On the US firmware the theme will not
@@ -173,11 +173,6 @@ These themes were tested on a **DNA 100C**. The DNA 250C and DNA 75C have the sa
 has not been tested yet. If something is cut off at an edge or looks wrong on your chip,
 please [open an issue](https://github.com/Gerglem/gremlin-dna/issues). Tell us your chip,
 your firmware (international or US), and add a photo of the screen.
-
-### High Contrast will not upload to a DNA 75C
-
-It does not fit. EScribe reports it out of space. Gremlin and Lantern are expected to
-work on the DNA 75C.
 
 ### Still stuck?
 
